@@ -639,7 +639,7 @@ int cpuinfo_has_feature(int feature)
 	if (ecx & (1 << 0))
 	  feature_set_bit(SSE3);
 	if (ecx & (1 << 9))
-	  feature_set_bit(SSE4);
+	  feature_set_bit(SSSE3);
 	if (ecx & (1 << 5))
 	  feature_set_bit(VMX);
 
@@ -664,6 +664,7 @@ int cpuinfo_has_feature(int feature)
 		feature_get_bit(SSE) ||
 		feature_get_bit(SSE2) ||
 		feature_get_bit(SSE3) ||
+		feature_get_bit(SSSE3) ||
 		feature_get_bit(SSE4))
 	  cpuinfo_feature_set_bit(CPUINFO_FEATURE_SIMD);
 
