@@ -143,7 +143,7 @@ static const cpuinfo_feature_string_t x86_feature_strings[] = {
   [CPUINFO_(SSE4)] = { "nni", "SSE4 Technology (Nehalem New Instructions)" },
   [CPUINFO_(VMX)] = { "vmx", "Intel Virtualisation Technology (VT)" },
   [CPUINFO_(SVM)] = { "svm", "AMD-v Technology (Pacifica)" },
-  [CPUINFO_(LM)]= { "lm", "Long Mode" },
+  [CPUINFO_(LM)]= { "lm", "Long Mode (64-bit capable)" },
   [CPUINFO_(LAHF64)] = { "lahf_lm", "LAHF/SAHF Supported in 64-bit mode" },
   [CPUINFO_(BSFCC)] = { "bsf_cc", "BSF instruction clobbers condition codes" },
 #undef CPUINFO_
