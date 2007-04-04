@@ -81,6 +81,97 @@ int cpuinfo_get_vendor(void)
 }
 
 // Get AMD processor name
+static const char *get_model_amd_npt(void)
+{
+  // assume we are a valid AMD NPT Family 0Fh processor
+  uint32_t eax, ebx;
+  cpuid(0x80000001, &eax, &ebx, NULL, NULL);
+  uint32_t BrandId = ebx & 0xffff;
+
+  uint32_t PwrLmt = ((BrandId >> 5) & 0xe) | ((BrandId >> 14) & 1);		// BrandId[8:6,14]
+  uint32_t BrandTableIndex = (BrandId >> 9) & 0x1f;						// BrandId[13:9]
+  uint32_t NN = ((BrandId >> 9) & 0x40) | (BrandId & 0x3f);				// BrandId[15,5:0]
+  uint32_t CmpCap = cpuinfo_get_cores() > 1;
+
+  typedef struct processor_name_string {
+	int8_t cmp;
+	uint8_t index;
+	uint8_t pwr_lmt;
+	const char *name;
+	char model;
+  } processor_name_string_t;
+  static const processor_name_string_t socket_F_table[] = {
+	{  1, 0x01, 0x6, "Opteron 22%d HE",			'R' },
+	{  1, 0x01, 0xA, "Opteron 22%d",			'R' },
+	{  1, 0x01, 0xC, "Opteron 22%d SE",			'R' },
+	{  1, 0x04, 0x6, "Opteron 82%d HE",			'R' },
+	{  1, 0x04, 0xA, "Opteron 82%d",			'R' },
+	{  1, 0x04, 0xC, "Opteron 82%d SE",			'R' },
+	{ -1, 0x00, 0x0, "AMD Engineering Sample",	    },
+	{ -1, 0x00, 0x0, NULL,						    }
+  };
+  static const processor_name_string_t socket_AM2_table[] = {
+	{  0, 0x04, 0x4, "Athlon 64 %d00+",			'T' },
+	{  0, 0x04, 0x8, "Athlon 64 %d00+",			'T' },
+	{  0, 0x06, 0x4, "Sempron %d00+",			'T' },
+	{  0, 0x06, 0x8, "Sempron %d00+",			'T' },
+	{  1, 0x01, 0xA, "Opteron 12%d",			'R' },
+	{  1, 0x01, 0xC, "Opteron 12%d SE",			'R' },
+	{  1, 0x04, 0x2, "Athlon 64 X2 %d00+",		'T' },
+	{  1, 0x04, 0x6, "Athlon 64 X2 %d00+",		'T' },
+	{  1, 0x04, 0x8, "Athlon 64 X2 %d00+",		'T' },
+	{  1, 0x05, 0xC, "Athlon 64 FX-%d",			'Z' },
+	{ -1, 0x00, 0x0, "AMD Engineering Sample",	    },
+	{ -1, 0x00, 0x0, NULL,						    }
+  };
+  static const processor_name_string_t socket_S1_table[] = {
+	{  1, 0x02, 0xC, "Turion 64 X2 TL-%d",		'Y' },
+	{ -1, 0x00, 0x0, "AMD Engineering Sample",	    },
+	{ -1, 0x00, 0x0, NULL,						    }
+  };
+
+  const processor_name_string_t *model_names = NULL;
+  switch (cpuinfo_get_socket()) {
+  case CPUINFO_SOCKET_F:
+	model_names = socket_F_table;
+	break;
+  case CPUINFO_SOCKET_AM2:
+	model_names = socket_AM2_table;
+	break;
+  case CPUINFO_SOCKET_S1:
+	model_names = socket_S1_table;
+	break;
+  }
+  if (model_names == NULL)
+	return NULL;
+
+  int i;
+  for (i = 0; model_names[i].name != NULL; i++) {
+	const processor_name_string_t *mp = &model_names[i];
+	if (mp->cmp == -1
+		|| (mp->cmp == CmpCap
+			&& mp->index == BrandTableIndex
+			&& mp->pwr_lmt == PwrLmt)) {
+	  int model_number = mp->model;
+	  switch (model_number) {
+	  case 'R': model_number = -1 + NN; break;
+	  case 'P': model_number = 26 + NN; break;
+	  case 'T': model_number = 15 + CmpCap * 10 + NN; break;
+	  case 'Z': model_number = 57 + NN; break;
+	  case 'Y': model_number = 29 + NN; break;
+	  }
+	  static char model[64];
+	  if (model_number)
+		sprintf(model, mp->name, model_number);
+	  else
+		sprintf(model, mp->name);
+	  return model;
+	}
+  }
+
+  return NULL;
+}
+
 static const char *get_model_amd(void)
 {
   uint32_t cpuid_level;
@@ -88,8 +179,8 @@ static const char *get_model_amd(void)
   if (cpuid_level < 1)
 	return NULL;
 
-  uint32_t ebx;
-  cpuid(1, NULL, &ebx, NULL, NULL);
+  uint32_t eax, ebx;
+  cpuid(1, &eax, &ebx, NULL, NULL);
   uint32_t eightbit_brand_id = ebx & 0xff;
 
   cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
@@ -97,6 +188,9 @@ static const char *get_model_amd(void)
 	return NULL;
   if (cpuid_level < 0x80000001)
 	  return NULL;
+
+  if ((eax & 0xffffff00) == 0x00040f00)
+	return get_model_amd_npt();
 
   uint32_t ecx, edx;
   cpuid(0x80000001, NULL, &ebx, &ecx, &edx);
