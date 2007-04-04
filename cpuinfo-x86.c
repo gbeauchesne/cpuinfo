@@ -90,7 +90,7 @@ static const char *get_model_amd(void)
 
   uint32_t ebx;
   cpuid(1, NULL, &ebx, NULL, NULL);
-  uint32_t brand_id = ebx & 0xff;
+  uint32_t eightbit_brand_id = ebx & 0xff;
 
   cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
   if ((cpuid_level & 0xffff0000) != 0x80000000)
@@ -100,12 +100,22 @@ static const char *get_model_amd(void)
 
   uint32_t ecx, edx;
   cpuid(0x80000001, NULL, &ebx, &ecx, &edx);
-  if (brand_id != 0 || ebx == 0) // Ensure 8BitBrandId == 0, BrandId == non-zero
-	return NULL;
-  D(bug("* cpuinfo_get_model: AMD BrandId\n"));
+  uint32_t brand_id = ebx & 0xffff;
 
-  int BrandTableIndex = (ebx >> 6) & 0x3f;
-  int NN = ebx & 0x3f;
+  int BrandTableIndex, NN;
+  if (eightbit_brand_id != 0) {
+	BrandTableIndex = (eightbit_brand_id >> 3) & 0x1c;	// {0b,8BitBrandId[7:5],00b}
+	NN = eightbit_brand_id & 0x1f;						// {0b,8BitBrandId[4:0]}
+  }
+  else if (brand_id == 0) {
+	BrandTableIndex = 0;
+	NN = 0;
+  }
+  else {
+	BrandTableIndex = (brand_id >> 6) & 0x3f;			// BrandId[11:6]
+	NN = brand_id & 0x3f;								// BrandId[5:0]
+  }
+
   static const struct {
 	const char *name;
 	char model;
