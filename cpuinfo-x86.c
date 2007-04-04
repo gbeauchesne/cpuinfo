@@ -40,12 +40,11 @@ static void cpuid(uint32_t op, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint
   uint32_t d = edx ? *edx : 0;
 
 #if defined __i386__
-  __asm__ __volatile__ ("push	%%ebx\n\t"
+  __asm__ __volatile__ ("xchgl	%%ebx,%0\n\t"
 						"cpuid	\n\t"
-						"mov	%%ebx,%0\n\t"
-						"pop	%%ebx"
-						: "=r" (b), "=a" (a), "=c" (c), "=d" (d)
-						: "0" (op), "2" (c));
+						"xchgl	%%ebx,%0\n\t"
+						: "+r" (b), "=a" (a), "=c" (c), "=d" (d)
+						: "1" (op), "2" (c));
 #else
   __asm__ __volatile__ ("cpuid"
 						: "=a" (a), "=b" (b), "=c" (c), "=d" (d)
