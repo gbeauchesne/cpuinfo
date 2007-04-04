@@ -103,6 +103,8 @@ const char *cpuinfo_string_of_socket(int socket)
   case CPUINFO_SOCKET_939:		str = "Socket 939";		break;
   case CPUINFO_SOCKET_940:		str = "Socket 940";		break;
   case CPUINFO_SOCKET_AM2:		str = "Socket AM2";		break;
+  case CPUINFO_SOCKET_F:		str = "Socket F";		break;
+  case CPUINFO_SOCKET_S1:		str = "Socket S1";		break;
   }
   return str;
 }

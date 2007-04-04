@@ -57,6 +57,8 @@ enum {
   CPUINFO_SOCKET_939,
   CPUINFO_SOCKET_940,
   CPUINFO_SOCKET_AM2,
+  CPUINFO_SOCKET_F,
+  CPUINFO_SOCKET_S1,
 };
 
 // Get processor frequency in MHz

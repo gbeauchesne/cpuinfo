@@ -359,6 +359,22 @@ int cpuinfo_get_socket(void)
 		  D(bug("* K8 cpuid(1) => %08x\n", eax));
 		  break;
 		}
+		switch ((eax >> 16) & 0xf) {
+		case 0x4:								// AMD NPT Family 0Fh (Orleans/Manila)
+		  cpuid(0x80000001, &eax, NULL, NULL, NULL);
+		  switch ((eax >> 4) & 3) {
+		  case 0:
+			socket = CPUINFO_SOCKET_S1;
+			break;
+		  case 1:
+			socket = CPUINFO_SOCKET_F;
+			break;
+		  case 3:
+			socket = CPUINFO_SOCKET_AM2;
+			break;
+		  }
+		  break;
+		}
 	  }
 	}
 
