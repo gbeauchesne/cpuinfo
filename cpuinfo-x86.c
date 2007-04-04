@@ -278,7 +278,7 @@ static const char *get_model_amd(void)
 	return NULL;
 
   static char model[64];
-  if (model)
+  if (model_number)
 	sprintf(model, name, model_number);
   else
 	sprintf(model, name);
