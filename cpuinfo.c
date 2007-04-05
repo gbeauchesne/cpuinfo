@@ -28,11 +28,17 @@ int main(void)
 {
   int i, j;
 
+  struct cpuinfo *cip = cpuinfo_new();
+  if (cip == NULL) {
+	fprintf(stderr, "ERROR: could not allocate cpuinfo descriptor\n");
+	return 1;
+  }
+
   printf("Processor Information\n");
 
-  int vendor = cpuinfo_get_vendor();
-  printf("  Model: %s %s", cpuinfo_string_of_vendor(vendor), cpuinfo_get_model());
-  int freq = cpuinfo_get_frequency();
+  int vendor = cpuinfo_get_vendor(cip);
+  printf("  Model: %s %s", cpuinfo_string_of_vendor(vendor), cpuinfo_get_model(cip));
+  int freq = cpuinfo_get_frequency(cip);
   if (freq > 0) {
 	printf(", ");
 	if (freq > 1000)
@@ -42,13 +48,13 @@ int main(void)
   }
   printf("\n");
 
-  int socket = cpuinfo_get_socket();
+  int socket = cpuinfo_get_socket(cip);
   printf("  Package:");
   if (socket != CPUINFO_SOCKET_UNKNOWN)
 	printf(" %s,", cpuinfo_string_of_socket(socket));
-  int n_cores = cpuinfo_get_cores();
+  int n_cores = cpuinfo_get_cores(cip);
   printf(" %d Core%s", n_cores, n_cores > 1 ? "s" : "");
-  int n_threads = cpuinfo_get_threads();
+  int n_threads = cpuinfo_get_threads(cip);
   if (n_threads > 1)
 	printf(", %d Threads per Core", n_threads);
   printf("\n");
@@ -56,18 +62,21 @@ int main(void)
   printf("\n");
   printf("Processor Caches\n");
 
-  cpuinfo_cache_t ci;
-  for (i = cpuinfo_get_cache(0, &ci); i > 0; i = cpuinfo_get_cache(i, &ci)) {
-	if (ci.level == 0 && ci.type == CPUINFO_CACHE_TYPE_TRACE)
-	  printf("  Trace cache, %dK uOps", ci.size);
-	else {
-	  printf("  L%d %s cache, ", ci.level, cpuinfo_string_of_cache_type(ci.type));
-	  if (ci.size > 1024)
-		printf("%.2f MB", (double)ci.size / 1024.0);
-	  else
-		printf("%d KB", ci.size);
+  const cpuinfo_cache_t *ccp = cpuinfo_get_caches(cip);
+  if (ccp) {
+	for (i = 0; i < ccp->count; i++) {
+	  const cpuinfo_cache_descriptor_t *ccdp = &ccp->descriptors[i];
+	  if (ccdp->level == 0 && ccdp->type == CPUINFO_CACHE_TYPE_TRACE)
+		printf("  Trace cache, %dK uOps", ccdp->size);
+	  else {
+		printf("  L%d %s cache, ", ccdp->level, cpuinfo_string_of_cache_type(ccdp->type));
+		if (ccdp->size > 1024)
+		  printf("%.2f MB", (double)ccdp->size / 1024.0);
+		else
+		  printf("%d KB", ccdp->size);
+	  }
+	  printf("\n");
 	}
-	printf("\n");
   }
 
   printf("\n");
@@ -87,13 +96,15 @@ int main(void)
 	int count = features_bits[i].max - base;
 	for (j = 0; j < count; j++) {
 	  int feature = base + j;
-	  if (cpuinfo_has_feature(feature)) {
+	  if (cpuinfo_has_feature(cip, feature)) {
 		const char *name = cpuinfo_string_of_feature(feature);
 		const char *detail = cpuinfo_string_of_feature_detail(feature);
 		printf("  %-10s %s\n", name, detail);
 	  }
 	}
   }
+
+  cpuinfo_destroy(cip);
 
   return 0;
 }

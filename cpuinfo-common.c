@@ -19,6 +19,7 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
 
@@ -26,36 +27,83 @@
 #include "debug.h"
 
 
+// Returns a new cpuinfo descriptor
+struct cpuinfo *cpuinfo_new(void)
+{
+  cpuinfo_t *cip = malloc(sizeof(*cip));
+  if (cip) {
+	cip->vendor = -1;
+	cip->model = NULL;
+	cip->frequency = -1;
+	cip->socket = -1;
+	cip->n_cores = -1;
+	cip->n_threads = -1;
+	cip->cache_info.count = -1;
+	cip->cache_info.descriptors = NULL;
+	cip->common_features = NULL;
+	cip->x86_features = NULL;
+	cip->ppc_features = NULL;
+  }
+  return cip;
+}
+
+// Release the cpuinfo descriptor and all allocated data
+void cpuinfo_destroy(struct cpuinfo *cip)
+{
+  if (cip) {
+	if (cip->model)
+	  free((void *)cip->model);
+	if (cip->cache_info.descriptors)
+	  free((void *)cip->cache_info.descriptors);
+	if (cip->common_features)
+	  free(cip->common_features);
+	if (cip->x86_features)
+	  free(cip->x86_features);
+	if (cip->ppc_features)
+	  free(cip->ppc_features);
+	free(cip);
+  }
+}
+
+
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
 #define CPUINFO_SZ_(NAME) (1 + ((CPUINFO_FEATURE_##NAME##_MAX - CPUINFO_FEATURE_##NAME) / 32))
-static uint32_t common_features[CPUINFO_SZ_(COMMON)];
-static uint32_t x86_features[CPUINFO_SZ_(X86)];
-static uint32_t ppc_features[CPUINFO_SZ_(PPC)];
-#undef CPUINFO_SZ_
 
-static uint32_t *cpuinfo_feature_table(int feature)
+static uint32_t *cpuinfo_feature_table(struct cpuinfo *cip, int feature, int ro)
 {
-  uint32_t *ftp = NULL;
+  uint32_t ftsize = 0;
+  uint32_t **ftpp = NULL;
   switch (feature & CPUINFO_FEATURE_ARCH) {
   case CPUINFO_FEATURE_COMMON:
-	ftp = common_features;
+	ftpp = &cip->common_features;
+	ftsize = CPUINFO_SZ_(COMMON);
 	break;
   case CPUINFO_FEATURE_X86:
-	ftp = x86_features;
+	ftpp = &cip->x86_features;
+	ftsize = CPUINFO_SZ_(X86);
 	break;
   case CPUINFO_FEATURE_PPC:
-	ftp = ppc_features;
+	ftpp = &cip->ppc_features;
+	ftsize = CPUINFO_SZ_(PPC);
 	break;
   }
-  return ftp;
+  if (ftpp) {
+	uint32_t *ftp = *ftpp;
+	if (!ro && ftp == NULL)
+	  *ftpp = ftp = malloc(ftsize);
+	return ftp;
+  }
+  return NULL;
 }
 
-int cpuinfo_feature_get_bit(int feature)
+#undef CPUINFO_SZ_
+
+int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature)
 {
-  uint32_t *ftp = cpuinfo_feature_table(feature);
+  uint32_t *ftp = cpuinfo_feature_table(cip, feature, 1);
   if (ftp) {
 	feature &= CPUINFO_FEATURE_MASK;
 	return ftp[feature / 32] & (1 << (feature % 32));
@@ -63,19 +111,19 @@ int cpuinfo_feature_get_bit(int feature)
   return 0;
 }
 
-
-/* ========================================================================= */
-/* == Stringification of CPU Information bits                             == */
-/* ========================================================================= */
-
-void cpuinfo_feature_set_bit(int feature)
+void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature)
 {
-  uint32_t *ftp = cpuinfo_feature_table(feature);
+  uint32_t *ftp = cpuinfo_feature_table(cip, feature, 0);
   if (ftp) {
 	feature &= CPUINFO_FEATURE_MASK;
 	ftp[feature / 32] |= 1 << (feature % 32);
   }
 }
+
+
+/* ========================================================================= */
+/* == Stringification of CPU Information bits                             == */
+/* ========================================================================= */
 
 const char *cpuinfo_string_of_vendor(int vendor)
 {

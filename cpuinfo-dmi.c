@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include "cpuinfo.h"
+#include "cpuinfo-private.h"
 
 #define DEBUG 1
 #include "debug.h"
@@ -155,15 +156,11 @@ static int dmi_socket(uint8_t *data, int *p_socket)
 }
 
 // Get processor socket ID
-int cpuinfo_dmi_get_socket(void)
+int cpuinfo_dmi_get_socket(struct cpuinfo *cip)
 {
-  static int socket = -1;
-
-  if (socket < 0) {
-	if (dmi_detect((dmi_decode)dmi_socket, &socket) < 0)
-	  socket = CPUINFO_SOCKET_UNKNOWN;
-  }
-
+  int socket = -1;
+  if (dmi_detect((dmi_decode)dmi_socket, &socket) < 0)
+	socket = CPUINFO_SOCKET_UNKNOWN;
   return socket;
 }
 
@@ -184,75 +181,64 @@ static int dmi_cache_handle(uint8_t *data, uint16_t *p_handle)
   return 0;
 }
 
-static int dmi_cache_info(uint8_t *data, cpuinfo_cache_t *cip)
+static int dmi_cache_info(uint8_t *data, cpuinfo_cache_descriptor_t *ccdp)
 {
   struct dmi_header *dm = (struct dmi_header *)data;
 
-  if (dm->type == 7 && dm->handle == cip->type) {
+  if (dm->type == 7 && dm->handle == ccdp->type) {
 	int cache_type = data[0x11];
 	switch (cache_type) {
-	case 3: cip->type = CPUINFO_CACHE_TYPE_CODE; break;
-	case 4: cip->type = CPUINFO_CACHE_TYPE_DATA; break;
-	case 5: cip->type = CPUINFO_CACHE_TYPE_UNIFIED; break;
-	default: cip->type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
+	case 3: ccdp->type = CPUINFO_CACHE_TYPE_CODE; break;
+	case 4: ccdp->type = CPUINFO_CACHE_TYPE_DATA; break;
+	case 5: ccdp->type = CPUINFO_CACHE_TYPE_UNIFIED; break;
+	default: ccdp->type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
 	}
 	uint16_t installed_size = (data[0x0a] << 8) | data[0x09];
 	D(bug("* dmi_cache_info %02x, %04x\n", cache_type, installed_size));
-	cip->size = installed_size & 0x7fff;		// 1K granularity (default)
+	ccdp->size = installed_size & 0x7fff;		// 1K granularity (default)
 	if (installed_size & 0x8000)
-	  cip->size *= 64;							// 64K granularity
+	  ccdp->size *= 64;							// 64K granularity
   }
 
   return 0;
 }
 
-static int get_cache(int ofs, cpuinfo_cache_t *cip)
+static int get_cache(int ofs, cpuinfo_cache_descriptor_t *ccdp)
 {
   uint16_t handle = ofs;
   if (dmi_detect((dmi_decode)dmi_cache_handle, &handle) < 0)
 	return -1;
   if (handle == 0xffff)
 	return -1;
-  cip->type = handle;
-  if (dmi_detect((dmi_decode)dmi_cache_info, cip) < 0)
+  ccdp->type = handle;
+  if (dmi_detect((dmi_decode)dmi_cache_info, ccdp) < 0)
 	return -1;
   return 0;
 }
 
 // Get cache information (initialize with iter = 0, returns the
 // iteration number or -1 if no more information available)
-int cpuinfo_dmi_get_cache(int iter, cpuinfo_cache_t *cip)
+void cpuinfo_dmi_get_caches(struct cpuinfo *cip)
 {
 #define N_CACHE_DESCRIPTORS 3 /* 3 handles at most, SMBIOS 2.5 */
-  static cpuinfo_cache_t ci[N_CACHE_DESCRIPTORS];
-  static int ci_count = -1;
+  cpuinfo_cache_t *ccp = &cip->cache_info;
+  if ((ccp->descriptors = malloc(N_CACHE_DESCRIPTORS * sizeof(*ccp->descriptors))) == NULL)
+	return;
+  cpuinfo_cache_descriptor_t *ccdp = (cpuinfo_cache_descriptor_t *)ccp->descriptors;
 
-  if (ci_count < 0) {
-	ci_count = 0;
-	if (get_cache(0x1a, &ci[ci_count]) == 0) {
-	  ci[ci_count].level = 1;
-	  ci_count++;
-	}
-	if (get_cache(0x1c, &ci[ci_count]) == 0) {
-	  ci[ci_count].level = 2;
-	  ci_count++;
-	}
-	if (get_cache(0x1e, &ci[ci_count]) == 0) {
-	  ci[ci_count].level = 3;
-	  ci_count++;
-	}
+  ccp->count = 0;
+  if (get_cache(0x1a, ccdp) == 0) {
+	ccdp->level = 1;
+	ccp->count++;
   }
-
-  if (iter < 0 || iter >= ci_count)
-	return -1;
-
-  if (cip)
-	*cip = ci[iter];
-
-  if (++iter == N_CACHE_DESCRIPTORS)
-	return -1;
-
-  return iter;
+  if (get_cache(0x1c, ++ccdp) == 0) {
+	ccdp->level = 2;
+	ccp->count++;
+  }
+  if (get_cache(0x1e, ++ccdp) == 0) {
+	ccdp->level = 3;
+	ccp->count++;
+  }
 }
 
 #endif

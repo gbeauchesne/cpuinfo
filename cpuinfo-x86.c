@@ -18,6 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define _GNU_SOURCE 1
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
@@ -58,29 +60,27 @@ static void cpuid(uint32_t op, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint
 }
 
 // Get processor vendor ID 
-int cpuinfo_get_vendor(void)
+int cpuinfo_get_vendor(struct cpuinfo *cip)
 {
-  static int vendor = -1;
-
-  if (vendor < 0) {
+  if (cip->vendor < 0) {
 	char v[13] = { 0, };
 	cpuid(0, NULL, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
 
 	if (!strcmp(v, "GenuineIntel"))
-	  vendor = CPUINFO_VENDOR_INTEL;
+	  cip->vendor = CPUINFO_VENDOR_INTEL;
 	else if (!strcmp(v, "AuthenticAMD"))
-	  vendor = CPUINFO_VENDOR_AMD;
+	  cip->vendor = CPUINFO_VENDOR_AMD;
 	else if (!strcmp(v, "GenuineTMx86") || !strcmp(v, "TransmetaCPU"))
-	  vendor = CPUINFO_VENDOR_TRANSMETA;
+	  cip->vendor = CPUINFO_VENDOR_TRANSMETA;
 	else
-	  vendor = CPUINFO_VENDOR_UNKNOWN;
+	  cip->vendor = CPUINFO_VENDOR_UNKNOWN;
   }
 
-  return vendor;
+  return cip->vendor;
 }
 
 // Get AMD processor name
-static const char *get_model_amd_npt(void)
+static const char *get_model_amd_npt(struct cpuinfo *cip)
 {
   // assume we are a valid AMD NPT Family 0Fh processor
   uint32_t eax, ebx;
@@ -90,7 +90,7 @@ static const char *get_model_amd_npt(void)
   uint32_t PwrLmt = ((BrandId >> 5) & 0xe) | ((BrandId >> 14) & 1);		// BrandId[8:6,14]
   uint32_t BrandTableIndex = (BrandId >> 9) & 0x1f;						// BrandId[13:9]
   uint32_t NN = ((BrandId >> 9) & 0x40) | (BrandId & 0x3f);				// BrandId[15,5:0]
-  uint32_t CmpCap = cpuinfo_get_cores() > 1;
+  uint32_t CmpCap = cpuinfo_get_cores(cip) > 1;
 
   typedef struct processor_name_string {
 	int8_t cmp;
@@ -130,7 +130,7 @@ static const char *get_model_amd_npt(void)
   };
 
   const processor_name_string_t *model_names = NULL;
-  switch (cpuinfo_get_socket()) {
+  switch (cpuinfo_get_socket(cip)) {
   case CPUINFO_SOCKET_F:
 	model_names = socket_F_table;
 	break;
@@ -158,11 +158,13 @@ static const char *get_model_amd_npt(void)
 	  case 'Z': model_number = 57 + NN; break;
 	  case 'Y': model_number = 29 + NN; break;
 	  }
-	  static char model[64];
-	  if (model_number)
-		sprintf(model, mp->name, model_number);
-	  else
-		sprintf(model, mp->name);
+	  char *model = malloc(64);
+	  if (model) {
+		if (model_number)
+		  sprintf(model, mp->name, model_number);
+		else
+		  sprintf(model, mp->name);
+	  }
 	  return model;
 	}
   }
@@ -170,7 +172,7 @@ static const char *get_model_amd_npt(void)
   return NULL;
 }
 
-static const char *get_model_amd(void)
+static const char *get_model_amd(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
   cpuid(0, &cpuid_level, NULL, NULL, NULL);
@@ -185,10 +187,10 @@ static const char *get_model_amd(void)
   if ((cpuid_level & 0xffff0000) != 0x80000000)
 	return NULL;
   if (cpuid_level < 0x80000001)
-	  return NULL;
+	return NULL;
 
   if ((eax & 0xffffff00) == 0x00040f00)
-	return get_model_amd_npt();
+	return get_model_amd_npt(cip);
 
   uint32_t ecx, edx;
   cpuid(0x80000001, NULL, &ebx, &ecx, &edx);
@@ -275,17 +277,19 @@ static const char *get_model_amd(void)
   if (name == NULL)
 	return NULL;
 
-  static char model[64];
-  if (model_number)
-	sprintf(model, name, model_number);
-  else
-	sprintf(model, name);
+  char *model = malloc(64);
+  if (model) {
+	if (model_number)
+	  sprintf(model, name, model_number);
+	else
+	  sprintf(model, name);
+  }
 
   return model;
 }
 
 // Get Intel processor name
-static const char *get_model_intel(void)
+static const char *get_model_intel(struct cpuinfo *cip)
 {
   return NULL;
 }
@@ -335,7 +339,9 @@ static int freq_string(const char *cp, const char *ep)
 
 static const char *sanitize_brand_id_string(const char *str)
 {
-  static char model[49];
+  char *model = malloc(64);
+  if (model == NULL)
+	return NULL;
   const char *cp;
   char *mp = model;
   cp = skip_tokens(skip_tokens(skip_blanks(str))); // skip Vendor(TM)
@@ -355,29 +361,29 @@ static const char *sanitize_brand_id_string(const char *str)
 	cp = ep;
   } while (*cp != 0);
   *mp = '\0';
-  if (mp == model)
-	return NULL;
+  if (mp == model) {
+	free(model);
+	model = NULL;
+  }
   return model;
 }
 
 // Get processor name
-const char *cpuinfo_get_model(void)
+const char *cpuinfo_get_model(struct cpuinfo *cip)
 {
-  static const char *model = NULL;
-
-  if (model == NULL) {
-	int vendor = cpuinfo_get_vendor();
+  if (cip->model == NULL) {
+	int vendor = cpuinfo_get_vendor(cip);
 	switch (vendor) {
 	case CPUINFO_VENDOR_AMD:
-	  model = get_model_amd();
+	  cip->model = get_model_amd(cip);
 	  break;
 	case CPUINFO_VENDOR_INTEL:
-	  model = get_model_intel();
+	  cip->model = get_model_intel(cip);
 	  break;
 	}
   }
 
-  if (model == NULL) {
+  if (cip->model == NULL) {
 	uint32_t cpuid_level;
 	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
 	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000004) {
@@ -386,14 +392,14 @@ const char *cpuinfo_get_model(void)
 	  cpuid(0x80000002, &m.r[0], &m.r[1], &m.r[2], &m.r[3]);
 	  cpuid(0x80000003, &m.r[4], &m.r[5], &m.r[6], &m.r[7]);
 	  cpuid(0x80000004, &m.r[8], &m.r[9], &m.r[10], &m.r[11]);
-	  model = sanitize_brand_id_string(m.str);
+	  cip->model = sanitize_brand_id_string(m.str);
 	}
   }
 
-  if (model == NULL)
-	model = "<unknown>";
+  if (cip->model == NULL)
+	cip->model = strdup("<unknown>");
 
-  return model;
+  return cip->model;
 }
 
 // Get processor ticks
@@ -413,16 +419,19 @@ static inline uint64_t get_ticks_usec(void)
 }
 
 // Get processor frequency in MHz (x86info)
-int cpuinfo_get_frequency(void)
+int cpuinfo_get_frequency(struct cpuinfo *cip)
 {
   uint64_t start, stop;
   uint64_t ticks_start, ticks_stop;
+
+  if (cip->frequency >= 0)
+	return cip->frequency;
 
   // Make sure TSC is available
   uint32_t edx;
   cpuid(1, NULL, NULL, NULL, &edx);
   if ((edx & (1 << 4)) == 0)
-	return 0;
+	return (cip->frequency = 0);
 
   start = get_ticks_usec();
   ticks_start = get_ticks();
@@ -434,117 +443,126 @@ int cpuinfo_get_frequency(void)
   stop = get_ticks_usec();
 
   uint64_t freq = (ticks_stop - ticks_start) / (stop - start);
-  return ((freq % 10) >= 5) ? (((freq / 10) * 10) + 10) : ((freq / 10) * 10);
+  return (cip->frequency = ((freq % 10) >= 5) ? (((freq / 10) * 10) + 10) : ((freq / 10) * 10));
 }
 
 // Get processor socket ID
-int cpuinfo_get_socket(void)
+static int cpuinfo_get_socket_amd(void)
 {
-  static int socket = -1;
+  int socket = -1;
 
-  if (socket < 0) {
-	socket = CPUINFO_SOCKET_UNKNOWN;
-
-	if (cpuinfo_get_vendor() == CPUINFO_VENDOR_AMD) {
-	  uint32_t eax;
-	  cpuid(1, &eax, NULL, NULL, NULL);
-	  if ((eax & 0xfff0ff00) == 0x00000f00) {	// AMD K8
-		// Factored from AMD Revision Guide, rev 3.59
-		switch ((eax >> 4) & 0xf) {
-		case 0x4: case 0x8: case 0xc:
-		  socket = CPUINFO_SOCKET_754;
-		  break;
-		case 0x3: case 0x7: case 0xb: case 0xf:
-		  socket = CPUINFO_SOCKET_939;
-		  break;
-		case 0x1: case 0x5:
-		  socket = CPUINFO_SOCKET_940;
-		  break;
-		default:
-		  D(bug("* K8 cpuid(1) => %08x\n", eax));
-		  break;
-		}
-		switch ((eax >> 16) & 0xf) {
-		case 0x4:								// AMD NPT Family 0Fh (Orleans/Manila)
-		  cpuid(0x80000001, &eax, NULL, NULL, NULL);
-		  switch ((eax >> 4) & 3) {
-		  case 0:
-			socket = CPUINFO_SOCKET_S1;
-			break;
-		  case 1:
-			socket = CPUINFO_SOCKET_F;
-			break;
-		  case 3:
-			socket = CPUINFO_SOCKET_AM2;
-			break;
-		  }
-		  break;
-		}
-	  }
+  uint32_t eax;
+  cpuid(1, &eax, NULL, NULL, NULL);
+  if ((eax & 0xfff0ff00) == 0x00000f00) {	// AMD K8
+	// Factored from AMD Revision Guide, rev 3.59
+	switch ((eax >> 4) & 0xf) {
+	case 0x4: case 0x8: case 0xc:
+	  socket = CPUINFO_SOCKET_754;
+	  break;
+	case 0x3: case 0x7: case 0xb: case 0xf:
+	  socket = CPUINFO_SOCKET_939;
+	  break;
+	case 0x1: case 0x5:
+	  socket = CPUINFO_SOCKET_940;
+	  break;
+	default:
+	  D(bug("* K8 cpuid(1) => %08x\n", eax));
+	  break;
 	}
-
-	if (socket == CPUINFO_SOCKET_UNKNOWN)
-	  socket = cpuinfo_dmi_get_socket();
+	switch ((eax >> 16) & 0xf) {
+	case 0x4:								// AMD NPT Family 0Fh (Orleans/Manila)
+	  cpuid(0x80000001, &eax, NULL, NULL, NULL);
+	  switch ((eax >> 4) & 3) {
+	  case 0:
+		socket = CPUINFO_SOCKET_S1;
+		break;
+	  case 1:
+		socket = CPUINFO_SOCKET_F;
+		break;
+	  case 3:
+		socket = CPUINFO_SOCKET_AM2;
+		break;
+	  }
+	  break;
+	}
   }
 
   return socket;
 }
 
-// Get number of cores per CPU package
-int cpuinfo_get_cores(void)
+int cpuinfo_get_socket(struct cpuinfo *cip)
 {
-  static int n_cores = -1;
+  if (cip->socket < 0) {
+	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD)
+	  cip->socket = cpuinfo_get_socket_amd();
+  }
 
-  if (n_cores < 0) {
-	n_cores = 1;
+  if (cip->socket < 0)
+	cip->socket = cpuinfo_dmi_get_socket(cip);
+
+  if (cip->socket < 0)
+	cip->socket = CPUINFO_SOCKET_UNKNOWN;
+
+  return cip->socket;
+}
+
+// Get number of cores per CPU package
+int cpuinfo_get_cores(struct cpuinfo *cip)
+{
+  if (cip->n_cores < 0) {
 	uint32_t eax, ebx, ecx, edx;
 
 	/* Intel Dual Core characterisation */
-	if (cpuinfo_get_vendor() == CPUINFO_VENDOR_INTEL) {
+	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
 	  cpuid(0, &eax, NULL, NULL, NULL);
 	  if (eax >= 4) {
 		ecx = 0;
 		cpuid(4, &eax, NULL, &ecx, NULL);
-		n_cores = 1 + ((eax >> 26) & 0x3f);
+		cip->n_cores = 1 + ((eax >> 26) & 0x3f);
 	  }
 	}
 
 	/* AMD Dual Core characterisation */
-	else if (cpuinfo_get_vendor() == CPUINFO_VENDOR_AMD) {
+	else if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD) {
 	  cpuid(0x80000000, &eax, NULL, NULL, NULL);
 	  if (eax >= 0x80000008) {
 		cpuid(0x80000008, NULL, NULL, &ecx, NULL);
-		n_cores = 1 + (ecx & 0xff);
+		cip->n_cores = 1 + (ecx & 0xff);
 	  }
     }
   }
 
-  return n_cores;
+  if (cip->n_cores < 1)
+	cip->n_cores = 1;
+
+  return cip->n_cores;
 }
 
 // Get number of threads per CPU core
-int cpuinfo_get_threads(void)
+int cpuinfo_get_threads(struct cpuinfo *cip)
 {
-  uint32_t eax, ebx, ecx, edx;
+  if (cip->n_threads < 0) {
+	uint32_t eax, ebx, ecx, edx;
 
-  if (cpuinfo_get_vendor() != CPUINFO_VENDOR_INTEL)
-	return 1;
-
-  /* Check for Hyper Threading Technology activated */
-  /* See "Intel Processor Identification and the CPUID Instruction" (3.3 Feature Flags) */
-  cpuid(0, &eax, NULL, NULL, NULL);
-  if (eax >= 1) {
-	cpuid(1, NULL, &ebx, NULL, &edx);
-	if (edx & (1 << 28)) { /* HTT flag */
-	  int n_cores = cpuinfo_get_cores();
-	  assert(n_cores > 0);
-	  int n_threads = ((ebx >> 16) & 0xff) / n_cores;
-	  if (n_threads > 1)
-		return n_threads;
+	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
+	  /* Check for Hyper Threading Technology activated */
+	  /* See "Intel Processor Identification and the CPUID Instruction" (3.3 Feature Flags) */
+	  cpuid(0, &eax, NULL, NULL, NULL);
+	  if (eax >= 1) {
+		cpuid(1, NULL, &ebx, NULL, &edx);
+		if (edx & (1 << 28)) { /* HTT flag */
+		  int n_cores = cpuinfo_get_cores(cip);
+		  assert(n_cores > 0);
+		  cip->n_threads = ((ebx >> 16) & 0xff) / n_cores;
+		}
+	  }
 	}
   }
 
-  return 1;
+  if (cip->n_threads < 1)
+	cip->n_threads = 1;
+
+  return cip->n_threads;
 }
 
 // Get cache information (initialize with iter = 0, returns the
@@ -611,111 +629,127 @@ intel_cache_table[] = {
 #undef C_
 };
 
-int cpuinfo_get_cache(int iter, cpuinfo_cache_t *cip)
+static void cpuinfo_do_get_caches(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
   cpuid(0, &cpuid_level, NULL, NULL, NULL);
+
+  int n_caches_alloc = 0;
+  cpuinfo_cache_descriptor_t *ccdp;
+  cpuinfo_cache_t *ccp = &cip->cache_info;
+  ccp->count = 0;
+  ccp->descriptors = NULL;
 
   if (cpuid_level >= 4) {
 	// XXX not MP safe cpuid()
 	D(bug("* cpuinfo_get_cache: cpuid(4)\n"));
 	uint32_t eax, ebx, ecx, edx;
-	ecx = iter;
-	cpuid(4, &eax, &ebx, &ecx, &edx);
-	int cache_type = eax & 0x1f;
-	if (cache_type == 0)
-	  return -1;
-	switch (cache_type) {
-	case 1: cache_type = CPUINFO_CACHE_TYPE_DATA; break;
-	case 2: cache_type = CPUINFO_CACHE_TYPE_CODE; break;
-	case 3: cache_type = CPUINFO_CACHE_TYPE_UNIFIED; break;
-	default: cache_type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
+	for (;;) {
+	  ecx = ccp->count;
+	  cpuid(4, &eax, &ebx, &ecx, &edx);
+	  int cache_type = eax & 0x1f;
+	  if (cache_type == 0)
+		break;
+	  switch (cache_type) {
+	  case 1: cache_type = CPUINFO_CACHE_TYPE_DATA; break;
+	  case 2: cache_type = CPUINFO_CACHE_TYPE_CODE; break;
+	  case 3: cache_type = CPUINFO_CACHE_TYPE_UNIFIED; break;
+	  default: cache_type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
+	  }
+	  if (ccp->count >= n_caches_alloc) {
+		n_caches_alloc += 2;
+		if ((ccp->descriptors = realloc((void *)ccp->descriptors, n_caches_alloc * sizeof(*ccp->descriptors))) == NULL) {
+		  ccp->count = -2;
+		  return;
+		}
+	  }
+	  ccdp = (cpuinfo_cache_descriptor_t *)&ccp->descriptors[ccp->count];
+	  ccdp->type = cache_type;
+	  ccdp->level = (eax >> 5) & 7;
+	  uint32_t W = 1 + ((ebx >> 22) & 0x3f);	// ways of associativity
+	  uint32_t P = 1 + ((ebx >> 12) & 0x1f);	// physical line partition
+	  uint32_t L = 1 + (ebx & 0xfff);			// system coherency line size
+	  uint32_t S = 1 + ecx;						// number of sets
+	  ccdp->size = (L * W * P * S) / 1024;
+	  ccp->count++;
 	}
-	if (cip) {
-	  cip->type = cache_type;
-	  cip->level = (eax >> 5) & 7;
-      uint32_t W = 1 + ((ebx >> 22) & 0x3f);	// ways of associativity
-      uint32_t P = 1 + ((ebx >> 12) & 0x1f);	// physical line partition
-      uint32_t L = 1 + (ebx & 0xfff);			// system coherency line size
-      uint32_t S = 1 + ecx;						// number of sets
-	  cip->size = (L * W * P * S) / 1024;
-	}
-	return iter + 1;
   }
 
-  if (cpuid_level >= 2) {
-	static cpuinfo_cache_t ci[4];				// maximum number of caches
-	static int ci_count = -1;
-	if (ci_count < 0) {
-	  int i, j, k, n;
-	  uint32_t regs[4];
-	  uint8_t *dp = (uint8_t *)regs;
-	  D(bug("* cpuinfo_get_cache: cpuid(2)\n"));
-	  cpuid(2, &regs[0], NULL, NULL, NULL);
-	  n = regs[0] & 0xff;						// number of times to iterate
-	  ci_count = 0;
-	  for (i = 0; i < n; i++) {
-		cpuid(2, &regs[0], &regs[1], &regs[2], &regs[3]);
-		for (j = 0; j < 4; j++) {
-		  if (regs[j] & 0x80000000)
-			regs[j] = 0;
-		}
-		for (j = 1; j < 16; j++) {
-		  uint8_t desc = dp[j];
-		  for (k = 0; intel_cache_table[k].desc != 0; k++) {
-			if (intel_cache_table[k].desc == desc) {
-			  ci[ci_count].type = intel_cache_table[k].type;
-			  ci[ci_count].level = intel_cache_table[k].level;
-			  ci[ci_count].size = intel_cache_table[k].size;
-			  D(bug("* %02x\n", desc));
-			  ci_count++;
-			  break;
-			}
+  if (ccp->count == 0 && cpuid_level >= 2) {
+	int i, j, k, n;
+	uint32_t regs[4];
+	uint8_t *dp = (uint8_t *)regs;
+	D(bug("* cpuinfo_get_cache: cpuid(2)\n"));
+	cpuid(2, &regs[0], NULL, NULL, NULL);
+	n = regs[0] & 0xff;						// number of times to iterate
+	if ((ccp->descriptors = malloc(n * sizeof(*ccp->descriptors))) == NULL)
+	  return;
+	for (i = 0; i < n; i++) {
+	  cpuid(2, &regs[0], &regs[1], &regs[2], &regs[3]);
+	  for (j = 0; j < 4; j++) {
+		if (regs[j] & 0x80000000)
+		  regs[j] = 0;
+	  }
+	  for (j = 1; j < 16; j++) {
+		uint8_t desc = dp[j];
+		for (k = 0; intel_cache_table[k].desc != 0; k++) {
+		  if (intel_cache_table[k].desc == desc) {
+			ccdp = (cpuinfo_cache_descriptor_t *)&ccp->descriptors[ccp->count];
+			ccdp->type = intel_cache_table[k].type;
+			ccdp->level = intel_cache_table[k].level;
+			ccdp->size = intel_cache_table[k].size;
+			D(bug("* %02x\n", desc));
+			ccp->count++;
+			break;
 		  }
 		}
 	  }
 	}
-	if (iter >= 0 && iter < ci_count) {
-	  if (cip)
-		*cip = ci[iter];
-	  return iter + 1;
-	}
   }
 
-  cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
-  if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000005) {
-	static cpuinfo_cache_t ci[3];
-	static int ci_count = -1;
-	if (ci_count < 0) {
+  if (ccp->count == 0) {
+	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
+	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000005) {
+	  if ((ccp->descriptors = malloc(3 * sizeof(*ccp->descriptors))) == NULL)
+		return;
+	  ccdp = (cpuinfo_cache_descriptor_t *)ccp->descriptors;
 	  uint32_t ecx, edx;
 	  D(bug("* cpuinfo_get_cache: cpuid(0x80000005)\n"));
 	  cpuid(0x80000005, NULL, NULL, &ecx, &edx);
-	  ci[0].level = 1;
-	  ci[0].type = CPUINFO_CACHE_TYPE_CODE;
-	  ci[0].size = (edx >> 24) & 0xff;
-	  ci[1].level = 1;
-	  ci[1].type = CPUINFO_CACHE_TYPE_DATA;
-	  ci[1].size = (ecx >> 24) & 0xff;
-	  ci_count = 2;
+	  ccdp->level = 1;
+	  ccdp->type = CPUINFO_CACHE_TYPE_CODE;
+	  ccdp->size = (edx >> 24) & 0xff;
+	  ccdp++;
+	  ccdp->level = 1;
+	  ccdp->type = CPUINFO_CACHE_TYPE_DATA;
+	  ccdp->size = (ecx >> 24) & 0xff;
+	  ccp->count = 2;
 	  if (cpuid_level >= 0x80000006) {
 		D(bug("* cpuinfo_get_cache: cpuid(0x80000006)\n"));
 		cpuid(0x80000006, NULL, NULL, &ecx, NULL);
 		if (((ecx >> 12) & 0xffff) != 0) {
-		  ci[2].level = 2;
-		  ci[2].type = CPUINFO_CACHE_TYPE_UNIFIED;
-		  ci[2].size = (ecx >> 16) & 0xffff;
-		  ci_count = 3;
+		  ccdp++;
+		  ccdp->level = 2;
+		  ccdp->type = CPUINFO_CACHE_TYPE_UNIFIED;
+		  ccdp->size = (ecx >> 16) & 0xffff;
+		  ccp->count++;
 		}
 	  }
 	}
-	if (iter >= 0 && iter < ci_count) {
-	  if (cip)
-		*cip = ci[iter];
-	  return iter + 1;
-	}
   }
 
-  return cpuinfo_dmi_get_cache(iter, cip);
+  if (ccp->count == 0)
+	cpuinfo_dmi_get_caches(cip);
+
+  // XXX sort caches
+}
+
+const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
+{
+  if (cip->cache_info.count < 0)
+	cpuinfo_do_get_caches(cip);
+  assert(cip->cache_info.count >= 0);
+  return &cip->cache_info;
 }
 
 static int bsf_clobbers_eflags(void)
@@ -746,16 +780,14 @@ static int bsf_clobbers_eflags(void)
   return mismatch;
 }
 
-#define feature_get_bit(NAME) cpuinfo_feature_get_bit(CPUINFO_FEATURE_X86_##NAME)
-#define feature_set_bit(NAME) cpuinfo_feature_set_bit(CPUINFO_FEATURE_X86_##NAME)
+#define feature_get_bit(NAME) cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86_##NAME)
+#define feature_set_bit(NAME) cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_X86_##NAME)
 
 // Returns 0 if CPU supports the specified feature
-int cpuinfo_has_feature(int feature)
+int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
 {
-  static int probed_features = 0;
-
-  if (!probed_features) {
-	cpuinfo_feature_set_bit(CPUINFO_FEATURE_X86);
+  if (!cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86)) {
+	cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_X86);
 
 	uint32_t eax, ecx, edx;
 	cpuid(1, NULL, NULL, &ecx, &edx);
@@ -789,7 +821,7 @@ int cpuinfo_has_feature(int feature)
 	  feature_set_bit(BSFCC);
 
 	if (feature_get_bit(LM))
-	  cpuinfo_feature_set_bit(CPUINFO_FEATURE_64BIT);
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_64BIT);
 
 	if (feature_get_bit(MMX) ||
 		feature_get_bit(SSE) ||
@@ -797,12 +829,10 @@ int cpuinfo_has_feature(int feature)
 		feature_get_bit(SSE3) ||
 		feature_get_bit(SSSE3) ||
 		feature_get_bit(SSE4))
-	  cpuinfo_feature_set_bit(CPUINFO_FEATURE_SIMD);
-
-	probed_features = 1;
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
   }
 
-  return cpuinfo_feature_get_bit(feature);
+  return cpuinfo_feature_get_bit(cip, feature);
 }
 
 #endif

@@ -21,6 +21,15 @@
 #ifndef CPUINFO_H
 #define CPUINFO_H
 
+// cpuinfo_t is a private data structure
+struct cpuinfo;
+
+// Returns a new cpuinfo descriptor
+extern struct cpuinfo *cpuinfo_new(void);
+
+// Release the cpuinfo descriptor and all allocated data
+extern void cpuinfo_destroy(struct cpuinfo *cip);
+
 /* ========================================================================= */
 /* == General Processor Information                                       == */
 /* ========================================================================= */
@@ -38,10 +47,10 @@ enum {
 };
 
 // Get processor vendor ID 
-extern int cpuinfo_get_vendor(void);
+extern int cpuinfo_get_vendor(struct cpuinfo *cip);
 
 // Get processor name
-extern const char *cpuinfo_get_model(void);
+extern const char *cpuinfo_get_model(struct cpuinfo *cip);
 
 // Processor socket
 enum {
@@ -62,16 +71,16 @@ enum {
 };
 
 // Get processor frequency in MHz
-extern int cpuinfo_get_frequency(void);
+extern int cpuinfo_get_frequency(struct cpuinfo *cip);
 
 // Get processor socket ID
-extern int cpuinfo_get_socket(void);
+extern int cpuinfo_get_socket(struct cpuinfo *cip);
 
 // Get number of cores per CPU package
-extern int cpuinfo_get_cores(void);
+extern int cpuinfo_get_cores(struct cpuinfo *cip);
 
 // Get number of threads per CPU core
-extern int cpuinfo_get_threads(void);
+extern int cpuinfo_get_threads(struct cpuinfo *cip);
 
 /* ========================================================================= */
 /* == Processor Caches Information                                        == */
@@ -89,11 +98,15 @@ typedef struct {
   int type;		// cache type (above)
   int level;	// cache level
   int size;		// cache size in KB
+} cpuinfo_cache_descriptor_t;
+
+typedef struct {
+  int count;	// number of cache descriptors
+  const cpuinfo_cache_descriptor_t *descriptors;
 } cpuinfo_cache_t;
 
-// Get cache information (initialize with iter = 0, returns the
-// iteration number or -1 if no more information available)
-extern int cpuinfo_get_cache(int iter, cpuinfo_cache_t *cip);
+// Get cache information (returns read-only descriptors)
+extern const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip);
 
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
@@ -130,7 +143,7 @@ enum {
 };
 
 // Returns 0 if CPU supports the specified feature
-extern int cpuinfo_has_feature(int feature);
+extern int cpuinfo_has_feature(struct cpuinfo *cip, int feature);
 
 // Utility functions to convert IDs
 extern const char *cpuinfo_string_of_vendor(int vendor);

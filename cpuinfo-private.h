@@ -21,23 +21,37 @@
 #ifndef CPUINFO_PRIVATE_H
 #define CPUINFO_PRIVATE_H
 
+struct cpuinfo {
+  int vendor;					// CPU vendor
+  const char *model;			// CPU model name
+  int frequency;				// CPU frequency in MHz
+  int socket;					// CPU socket type
+  int n_cores;					// Number of CPU cores
+  int n_threads;				// Number of threads per CPU core
+  cpuinfo_cache_t cache_info;	// Cache descriptors
+  uint32_t *common_features;	// Common CPU features table
+  uint32_t *x86_features;		// X86 features table
+  uint32_t *ppc_features;		// PowerPC features table
+};
+
+typedef struct cpuinfo cpuinfo_t;
+
 /* ========================================================================= */
 /* == General Processor Information (DMI Interface)                       == */
 /* ========================================================================= */
 
 // Get processor socket ID
-extern int cpuinfo_dmi_get_socket(void);
+extern int cpuinfo_dmi_get_socket(struct cpuinfo *cip);
 
-// Get cache information (initialize with iter = 0, returns the
-// iteration number or -1 if no more information available)
-extern int cpuinfo_dmi_get_cache(int iter, cpuinfo_cache_t *cip);
+// Fill in cache descriptors
+extern void cpuinfo_dmi_get_caches(struct cpuinfo *cip);
 
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
 // Accessors for cpuinfo_features[] table
-extern int cpuinfo_feature_get_bit(int feature);
-extern void cpuinfo_feature_set_bit(int feature);
+extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature);
+extern void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature);
 
 #endif /* CPUINFO_PRIVATE_H */
