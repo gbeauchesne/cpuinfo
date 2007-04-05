@@ -147,10 +147,9 @@ static const char *get_model_amd_npt(void)
   int i;
   for (i = 0; model_names[i].name != NULL; i++) {
 	const processor_name_string_t *mp = &model_names[i];
-	if (mp->cmp == -1
-		|| (mp->cmp == CmpCap
-			&& mp->index == BrandTableIndex
-			&& mp->pwr_lmt == PwrLmt)) {
+	if ((mp->cmp == -1 || mp->cmp == CmpCap)
+		&& mp->index == BrandTableIndex
+		&& mp->pwr_lmt == PwrLmt) {
 	  int model_number = mp->model;
 	  switch (model_number) {
 	  case 'R': model_number = -1 + NN; break;
@@ -313,6 +312,7 @@ static const char *skip_tokens(const char *cp)
 	"AMD", "Intel",				// processor vendors
 	"(TM)", "(R)", "(tm)",		// copyright marks
 	"CPU", "Processor", "@",	// superfluous tags
+	"Dual-Core", "Genuine",
 	NULL
   };
   int i;
@@ -355,6 +355,8 @@ static const char *sanitize_brand_id_string(const char *str)
 	cp = ep;
   } while (*cp != 0);
   *mp = '\0';
+  if (mp == model)
+	return NULL;
   return model;
 }
 
