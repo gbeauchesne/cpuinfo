@@ -312,7 +312,7 @@ static const char *skip_tokens(const char *cp)
   static const char *skip_list[] = {
 	"AMD", "Intel",				// processor vendors
 	"(TM)", "(R)", "(tm)",		// copyright marks
-	"CPU", "Processor",			// superfluous tags
+	"CPU", "Processor", "@",	// superfluous tags
 	NULL
   };
   int i;
