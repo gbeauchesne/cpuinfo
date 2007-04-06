@@ -18,7 +18,6 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define _GNU_SOURCE 1
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -59,28 +58,39 @@ static void cpuid(uint32_t op, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint
   if (edx) *edx = d;
 }
 
-// Get processor vendor ID 
-int cpuinfo_get_vendor(struct cpuinfo *cip)
+// Returns a new cpuinfo descriptor
+int cpuinfo_arch_new(struct cpuinfo *cip)
 {
-  if (cip->vendor < 0) {
-	char v[13] = { 0, };
-	cpuid(0, NULL, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
+  return 0;
+}
 
-	if (!strcmp(v, "GenuineIntel"))
-	  cip->vendor = CPUINFO_VENDOR_INTEL;
-	else if (!strcmp(v, "AuthenticAMD"))
-	  cip->vendor = CPUINFO_VENDOR_AMD;
-	else if (!strcmp(v, "GenuineTMx86") || !strcmp(v, "TransmetaCPU"))
-	  cip->vendor = CPUINFO_VENDOR_TRANSMETA;
-	else
-	  cip->vendor = CPUINFO_VENDOR_UNKNOWN;
-  }
+// Release the cpuinfo descriptor and all allocated data
+void cpuinfo_arch_destroy(struct cpuinfo *cip)
+{
+}
 
-  return cip->vendor;
+// Get processor vendor ID 
+int cpuinfo_arch_get_vendor(struct cpuinfo *cip)
+{
+  int vendor;
+
+  char v[13] = { 0, };
+  cpuid(0, NULL, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
+
+  if (!strcmp(v, "GenuineIntel"))
+	vendor = CPUINFO_VENDOR_INTEL;
+  else if (!strcmp(v, "AuthenticAMD"))
+	vendor = CPUINFO_VENDOR_AMD;
+  else if (!strcmp(v, "GenuineTMx86") || !strcmp(v, "TransmetaCPU"))
+	vendor = CPUINFO_VENDOR_TRANSMETA;
+  else
+	vendor = CPUINFO_VENDOR_UNKNOWN;
+
+  return vendor;
 }
 
 // Get AMD processor name
-static const char *get_model_amd_npt(struct cpuinfo *cip)
+static char *get_model_amd_npt(struct cpuinfo *cip)
 {
   // assume we are a valid AMD NPT Family 0Fh processor
   uint32_t eax, ebx;
@@ -172,7 +182,7 @@ static const char *get_model_amd_npt(struct cpuinfo *cip)
   return NULL;
 }
 
-static const char *get_model_amd(struct cpuinfo *cip)
+static char *get_model_amd(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
   cpuid(0, &cpuid_level, NULL, NULL, NULL);
@@ -289,7 +299,7 @@ static const char *get_model_amd(struct cpuinfo *cip)
 }
 
 // Get Intel processor name
-static const char *get_model_intel(struct cpuinfo *cip)
+static char *get_model_intel(struct cpuinfo *cip)
 {
   return NULL;
 }
@@ -337,7 +347,7 @@ static int freq_string(const char *cp, const char *ep)
 	&& (cp[0] == 'M' || cp[0] == 'G') && cp[1] == 'H' && cp[2] == 'z';
 }
 
-static const char *sanitize_brand_id_string(const char *str)
+static char *sanitize_brand_id_string(const char *str)
 {
   char *model = malloc(64);
   if (model == NULL)
@@ -369,21 +379,20 @@ static const char *sanitize_brand_id_string(const char *str)
 }
 
 // Get processor name
-const char *cpuinfo_get_model(struct cpuinfo *cip)
+char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 {
-  if (cip->model == NULL) {
-	int vendor = cpuinfo_get_vendor(cip);
-	switch (vendor) {
-	case CPUINFO_VENDOR_AMD:
-	  cip->model = get_model_amd(cip);
-	  break;
-	case CPUINFO_VENDOR_INTEL:
-	  cip->model = get_model_intel(cip);
-	  break;
-	}
+  char *model;
+
+  switch (cpuinfo_get_vendor(cip)) {
+  case CPUINFO_VENDOR_AMD:
+	model = get_model_amd(cip);
+	break;
+  case CPUINFO_VENDOR_INTEL:
+	model = get_model_intel(cip);
+	break;
   }
 
-  if (cip->model == NULL) {
+  if (model == NULL) {
 	uint32_t cpuid_level;
 	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
 	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000004) {
@@ -392,14 +401,11 @@ const char *cpuinfo_get_model(struct cpuinfo *cip)
 	  cpuid(0x80000002, &m.r[0], &m.r[1], &m.r[2], &m.r[3]);
 	  cpuid(0x80000003, &m.r[4], &m.r[5], &m.r[6], &m.r[7]);
 	  cpuid(0x80000004, &m.r[8], &m.r[9], &m.r[10], &m.r[11]);
-	  cip->model = sanitize_brand_id_string(m.str);
+	  model = sanitize_brand_id_string(m.str);
 	}
   }
 
-  if (cip->model == NULL)
-	cip->model = strdup("<unknown>");
-
-  return cip->model;
+  return model;
 }
 
 // Get processor ticks
@@ -419,19 +425,16 @@ static inline uint64_t get_ticks_usec(void)
 }
 
 // Get processor frequency in MHz (x86info)
-int cpuinfo_get_frequency(struct cpuinfo *cip)
+int cpuinfo_arch_get_frequency(struct cpuinfo *cip)
 {
   uint64_t start, stop;
   uint64_t ticks_start, ticks_stop;
-
-  if (cip->frequency >= 0)
-	return cip->frequency;
 
   // Make sure TSC is available
   uint32_t edx;
   cpuid(1, NULL, NULL, NULL, &edx);
   if ((edx & (1 << 4)) == 0)
-	return (cip->frequency = 0);
+	return 0;
 
   start = get_ticks_usec();
   ticks_start = get_ticks();
@@ -443,7 +446,7 @@ int cpuinfo_get_frequency(struct cpuinfo *cip)
   stop = get_ticks_usec();
 
   uint64_t freq = (ticks_stop - ticks_start) / (stop - start);
-  return (cip->frequency = ((freq % 10) >= 5) ? (((freq / 10) * 10) + 10) : ((freq / 10) * 10));
+  return ((freq % 10) >= 5) ? (((freq / 10) * 10) + 10) : ((freq / 10) * 10);
 }
 
 // Get processor socket ID
@@ -490,79 +493,68 @@ static int cpuinfo_get_socket_amd(void)
   return socket;
 }
 
-int cpuinfo_get_socket(struct cpuinfo *cip)
+int cpuinfo_arch_get_socket(struct cpuinfo *cip)
 {
-  if (cip->socket < 0) {
-	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD)
-	  cip->socket = cpuinfo_get_socket_amd();
-  }
+  int socket;
 
-  if (cip->socket < 0)
-	cip->socket = cpuinfo_dmi_get_socket(cip);
+  if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD)
+	socket = cpuinfo_get_socket_amd();
 
-  if (cip->socket < 0)
-	cip->socket = CPUINFO_SOCKET_UNKNOWN;
+  if (socket < 0)
+	socket = cpuinfo_dmi_get_socket(cip);
 
-  return cip->socket;
+  return socket;
 }
 
 // Get number of cores per CPU package
-int cpuinfo_get_cores(struct cpuinfo *cip)
+int cpuinfo_arch_get_cores(struct cpuinfo *cip)
 {
-  if (cip->n_cores < 0) {
-	uint32_t eax, ebx, ecx, edx;
+  uint32_t eax, ebx, ecx, edx;
 
-	/* Intel Dual Core characterisation */
-	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
-	  cpuid(0, &eax, NULL, NULL, NULL);
-	  if (eax >= 4) {
-		ecx = 0;
-		cpuid(4, &eax, NULL, &ecx, NULL);
-		cip->n_cores = 1 + ((eax >> 26) & 0x3f);
-	  }
+  /* Intel Dual Core characterisation */
+  if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
+	cpuid(0, &eax, NULL, NULL, NULL);
+	if (eax >= 4) {
+	  ecx = 0;
+	  cpuid(4, &eax, NULL, &ecx, NULL);
+	  return 1 + ((eax >> 26) & 0x3f);
 	}
-
-	/* AMD Dual Core characterisation */
-	else if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD) {
-	  cpuid(0x80000000, &eax, NULL, NULL, NULL);
-	  if (eax >= 0x80000008) {
-		cpuid(0x80000008, NULL, NULL, &ecx, NULL);
-		cip->n_cores = 1 + (ecx & 0xff);
-	  }
-    }
   }
 
-  if (cip->n_cores < 1)
-	cip->n_cores = 1;
+  /* AMD Dual Core characterisation */
+  else if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD) {
+	cpuid(0x80000000, &eax, NULL, NULL, NULL);
+	if (eax >= 0x80000008) {
+	  cpuid(0x80000008, NULL, NULL, &ecx, NULL);
+	  return 1 + (ecx & 0xff);
+	}
+  }
 
-  return cip->n_cores;
+  return 1;
 }
 
 // Get number of threads per CPU core
-int cpuinfo_get_threads(struct cpuinfo *cip)
+int cpuinfo_arch_get_threads(struct cpuinfo *cip)
 {
-  if (cip->n_threads < 0) {
-	uint32_t eax, ebx, ecx, edx;
+  uint32_t eax, ebx, ecx, edx;
 
-	if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
-	  /* Check for Hyper Threading Technology activated */
-	  /* See "Intel Processor Identification and the CPUID Instruction" (3.3 Feature Flags) */
-	  cpuid(0, &eax, NULL, NULL, NULL);
-	  if (eax >= 1) {
-		cpuid(1, NULL, &ebx, NULL, &edx);
-		if (edx & (1 << 28)) { /* HTT flag */
-		  int n_cores = cpuinfo_get_cores(cip);
-		  assert(n_cores > 0);
-		  cip->n_threads = ((ebx >> 16) & 0xff) / n_cores;
-		}
+  switch (cpuinfo_get_vendor(cip)) {
+  case CPUINFO_VENDOR_INTEL:
+	/* Check for Hyper Threading Technology activated */
+	/* See "Intel Processor Identification and the CPUID Instruction" (3.3 Feature Flags) */
+	cpuid(0, &eax, NULL, NULL, NULL);
+	if (eax >= 1) {
+	  cpuid(1, NULL, &ebx, NULL, &edx);
+	  if (edx & (1 << 28)) { /* HTT flag */
+		int n_cores = cpuinfo_get_cores(cip);
+		assert(n_cores > 0);
+		return ((ebx >> 16) & 0xff) / n_cores;
 	  }
 	}
+	break;
   }
 
-  if (cip->n_threads < 1)
-	cip->n_threads = 1;
-
-  return cip->n_threads;
+  return 1;
 }
 
 // Get cache information (initialize with iter = 0, returns the
@@ -629,7 +621,7 @@ intel_cache_table[] = {
 #undef C_
 };
 
-static void cpuinfo_do_get_caches(struct cpuinfo *cip)
+int cpuinfo_arch_get_caches(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
   cpuid(0, &cpuid_level, NULL, NULL, NULL);
@@ -744,14 +736,6 @@ static void cpuinfo_do_get_caches(struct cpuinfo *cip)
   // XXX sort caches
 }
 
-const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
-{
-  if (cip->cache_info.count < 0)
-	cpuinfo_do_get_caches(cip);
-  assert(cip->cache_info.count >= 0);
-  return &cip->cache_info;
-}
-
 static int bsf_clobbers_eflags(void)
 {
   int mismatch = 0;
@@ -784,7 +768,7 @@ static int bsf_clobbers_eflags(void)
 #define feature_set_bit(NAME) cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_X86_##NAME)
 
 // Returns 0 if CPU supports the specified feature
-int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
+int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 {
   if (!cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86)) {
 	cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_X86);

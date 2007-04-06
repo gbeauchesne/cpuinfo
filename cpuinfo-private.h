@@ -23,7 +23,7 @@
 
 struct cpuinfo {
   int vendor;					// CPU vendor
-  const char *model;			// CPU model name
+  char *model;					// CPU model name
   int frequency;				// CPU frequency in MHz
   int socket;					// CPU socket type
   int n_cores;					// Number of CPU cores
@@ -53,5 +53,39 @@ extern void cpuinfo_dmi_get_caches(struct cpuinfo *cip);
 // Accessors for cpuinfo_features[] table
 extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature);
 extern void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature);
+
+/* ========================================================================= */
+/* == Arch-specific Interface                                             == */
+/* ========================================================================= */
+
+// Returns a new cpuinfo descriptor
+extern int cpuinfo_arch_new(struct cpuinfo *cip);
+
+// Release the cpuinfo descriptor and all allocated data
+extern void cpuinfo_arch_destroy(struct cpuinfo *cip);
+
+// Get processor vendor ID 
+extern int cpuinfo_arch_get_vendor(struct cpuinfo *cip);
+
+// Get processor name
+extern char *cpuinfo_arch_get_model(struct cpuinfo *cip);
+
+// Get processor frequency in MHz
+extern int cpuinfo_arch_get_frequency(struct cpuinfo *cip);
+
+// Get processor socket ID
+extern int cpuinfo_arch_get_socket(struct cpuinfo *cip);
+
+// Get number of cores per CPU package
+extern int cpuinfo_arch_get_cores(struct cpuinfo *cip);
+
+// Get number of threads per CPU core
+extern int cpuinfo_arch_get_threads(struct cpuinfo *cip);
+
+// Get cache information (returns the number of caches detected)
+extern int cpuinfo_arch_get_caches(struct cpuinfo *cip);
+
+// Returns 0 if CPU supports the specified feature
+extern int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature);
 
 #endif /* CPUINFO_PRIVATE_H */

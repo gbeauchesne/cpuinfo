@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
 
@@ -43,6 +44,10 @@ struct cpuinfo *cpuinfo_new(void)
 	cip->common_features = NULL;
 	cip->x86_features = NULL;
 	cip->ppc_features = NULL;
+	if (cpuinfo_arch_new(cip) < 0) {
+	  free(cip);
+	  return NULL;
+	}
   }
   return cip;
 }
@@ -51,8 +56,9 @@ struct cpuinfo *cpuinfo_new(void)
 void cpuinfo_destroy(struct cpuinfo *cip)
 {
   if (cip) {
+	cpuinfo_arch_destroy(cip);
 	if (cip->model)
-	  free((void *)cip->model);
+	  free(cip->model);
 	if (cip->cache_info.descriptors)
 	  free((void *)cip->cache_info.descriptors);
 	if (cip->common_features)
@@ -63,6 +69,105 @@ void cpuinfo_destroy(struct cpuinfo *cip)
 	  free(cip->ppc_features);
 	free(cip);
   }
+}
+
+// Get processor vendor ID 
+int cpuinfo_get_vendor(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return -1;
+  if (cip->vendor < 0)
+	cip->vendor = cpuinfo_arch_get_vendor(cip);
+  return cip->vendor;
+}
+
+// Get processor name
+const char *cpuinfo_get_model(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return NULL;
+  if (cip->model == NULL) {
+	cip->model = cpuinfo_arch_get_model(cip);
+	if (cip->model == NULL) {
+	  static const char unknown_model[] = "<unknown>";
+	  if ((cip->model = malloc(sizeof(unknown_model))) == NULL)
+		return NULL;
+	  strcpy(cip->model, unknown_model);
+	}
+  }
+  return cip->model;
+}
+
+// Get processor frequency in MHz
+int cpuinfo_get_frequency(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return -1;
+  if (cip->frequency <= 0)
+	cip->frequency = cpuinfo_arch_get_frequency(cip);
+  return cip->frequency;
+}
+
+// Get processor socket ID
+int cpuinfo_get_socket(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return -1;
+  if (cip->socket < 0) {
+	cip->socket = cpuinfo_arch_get_socket(cip);
+	if (cip->socket < 0)
+	  cip->socket = CPUINFO_SOCKET_UNKNOWN;
+  }
+  return cip->socket;
+}
+
+// Get number of cores per CPU package
+int cpuinfo_get_cores(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return -1;
+  if (cip->n_cores < 0) {
+	cip->n_cores = cpuinfo_arch_get_cores(cip);
+	if (cip->n_cores < 1)
+	  cip->n_cores = 1;
+  }
+  return cip->n_cores;
+}
+
+// Get number of threads per CPU core
+int cpuinfo_get_threads(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return -1;
+  if (cip->n_threads < 0) {
+	cip->n_threads = cpuinfo_arch_get_threads(cip);
+	if (cip->n_threads < 1)
+	  cip->n_threads = 1;
+  }
+  return cip->n_threads;
+}
+
+// Get cache information (returns read-only descriptors)
+const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
+{
+  if (cip == NULL)
+	return NULL;
+  if (cip->cache_info.count < 0) {
+	if (cpuinfo_arch_get_caches(cip) < 0) {
+	  cip->cache_info.count = 0;
+	  if (cip->cache_info.descriptors) {
+		free((void *)cip->cache_info.descriptors);
+		cip->cache_info.descriptors = NULL;
+	  }
+	}
+  }
+  return &cip->cache_info;
+}
+
+// Returns 0 if CPU supports the specified feature
+int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
+{
+  return cpuinfo_arch_has_feature(cip, feature);
 }
 
 
