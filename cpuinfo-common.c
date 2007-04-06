@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
 
@@ -41,9 +42,8 @@ struct cpuinfo *cpuinfo_new(void)
 	cip->n_threads = -1;
 	cip->cache_info.count = -1;
 	cip->cache_info.descriptors = NULL;
-	cip->common_features = NULL;
-	cip->x86_features = NULL;
-	cip->ppc_features = NULL;
+	cip->opaque = NULL;
+	memset(cip->features, 0, sizeof(cip->features));
 	if (cpuinfo_arch_new(cip) < 0) {
 	  free(cip);
 	  return NULL;
@@ -61,12 +61,6 @@ void cpuinfo_destroy(struct cpuinfo *cip)
 	  free(cip->model);
 	if (cip->cache_info.descriptors)
 	  free((void *)cip->cache_info.descriptors);
-	if (cip->common_features)
-	  free(cip->common_features);
-	if (cip->x86_features)
-	  free(cip->x86_features);
-	if (cip->ppc_features)
-	  free(cip->ppc_features);
 	free(cip);
   }
 }
@@ -147,19 +141,71 @@ int cpuinfo_get_threads(struct cpuinfo *cip)
   return cip->n_threads;
 }
 
+// Cache descriptor comparator
+static int cache_desc_compare(const void *a, const void *b)
+{
+  const cpuinfo_cache_descriptor_t *cdp1 = a;
+  const cpuinfo_cache_descriptor_t *cdp2 = b;
+
+  if (cdp1->type == cdp2->type)
+	return cdp1->level - cdp2->level;
+  
+  // trace cache first
+  if (cdp1->type == CPUINFO_CACHE_TYPE_TRACE)
+	return -1;
+  if (cdp2->type == CPUINFO_CACHE_TYPE_TRACE)
+	return +1;
+
+  // code cache next
+  if (cdp1->type == CPUINFO_CACHE_TYPE_CODE)
+	return -1;
+  if (cdp2->type == CPUINFO_CACHE_TYPE_CODE)
+	return +1;
+
+  // data cache next
+  if (cdp1->type == CPUINFO_CACHE_TYPE_DATA)
+	return -1;
+  if (cdp2->type == CPUINFO_CACHE_TYPE_DATA)
+	return +1;
+
+  // unified cache finally
+  if (cdp1->type == CPUINFO_CACHE_TYPE_UNIFIED)
+	return -1;
+  if (cdp2->type == CPUINFO_CACHE_TYPE_UNIFIED)
+	return +1;
+
+  // ???
+  return 0;
+}
+
 // Get cache information (returns read-only descriptors)
 const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
 {
   if (cip == NULL)
 	return NULL;
   if (cip->cache_info.count < 0) {
-	if (cpuinfo_arch_get_caches(cip) < 0) {
-	  cip->cache_info.count = 0;
-	  if (cip->cache_info.descriptors) {
-		free((void *)cip->cache_info.descriptors);
-		cip->cache_info.descriptors = NULL;
+	cpuinfo_list_t caches_list = cpuinfo_arch_get_caches(cip);
+	cpuinfo_cache_descriptor_t *descs = NULL;
+	int count = 0;
+	if (caches_list) {
+	  int i;
+	  cpuinfo_list_t p = caches_list;
+	  while (p) {
+		++count;
+		p = p->next;
 	  }
+	  if ((descs = malloc(count * sizeof(*descs))) != NULL) {
+		p = caches_list;
+		for (i = 0; i < count; i++) {
+		  memcpy(&descs[i], p->data, sizeof(*descs));
+		  p = p->next;
+		}
+		qsort(descs, count, sizeof(*descs), cache_desc_compare);
+	  }
+	  cpuinfo_list_clear(&caches_list);
 	}
+	cip->cache_info.count = count;
+	cip->cache_info.descriptors = descs;
   }
   return &cip->cache_info;
 }
@@ -175,40 +221,9 @@ int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
-#define CPUINFO_SZ_(NAME) (1 + ((CPUINFO_FEATURE_##NAME##_MAX - CPUINFO_FEATURE_##NAME) / 32))
-
-static uint32_t *cpuinfo_feature_table(struct cpuinfo *cip, int feature, int ro)
-{
-  uint32_t ftsize = 0;
-  uint32_t **ftpp = NULL;
-  switch (feature & CPUINFO_FEATURE_ARCH) {
-  case CPUINFO_FEATURE_COMMON:
-	ftpp = &cip->common_features;
-	ftsize = CPUINFO_SZ_(COMMON);
-	break;
-  case CPUINFO_FEATURE_X86:
-	ftpp = &cip->x86_features;
-	ftsize = CPUINFO_SZ_(X86);
-	break;
-  case CPUINFO_FEATURE_PPC:
-	ftpp = &cip->ppc_features;
-	ftsize = CPUINFO_SZ_(PPC);
-	break;
-  }
-  if (ftpp) {
-	uint32_t *ftp = *ftpp;
-	if (!ro && ftp == NULL)
-	  *ftpp = ftp = malloc(ftsize);
-	return ftp;
-  }
-  return NULL;
-}
-
-#undef CPUINFO_SZ_
-
 int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature)
 {
-  uint32_t *ftp = cpuinfo_feature_table(cip, feature, 1);
+  uint32_t *ftp = cpuinfo_arch_feature_table(cip, feature);
   if (ftp) {
 	feature &= CPUINFO_FEATURE_MASK;
 	return ftp[feature / 32] & (1 << (feature % 32));
@@ -218,7 +233,7 @@ int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature)
 
 void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature)
 {
-  uint32_t *ftp = cpuinfo_feature_table(cip, feature, 0);
+  uint32_t *ftp = cpuinfo_arch_feature_table(cip, feature);
   if (ftp) {
 	feature &= CPUINFO_FEATURE_MASK;
 	ftp[feature / 32] |= 1 << (feature % 32);
@@ -338,4 +353,39 @@ const char *cpuinfo_string_of_feature_detail(int feature)
 {
   const cpuinfo_feature_string_t *fsp = cpuinfo_feature_string_ptr(feature);
   return fsp->detail ? fsp->detail : "<unknown>";
+}
+
+
+/* ========================================================================= */
+/* == Lists                                                               == */
+/* ========================================================================= */
+
+// Clear list
+int cpuinfo_list_clear(cpuinfo_list_t *lp)
+{
+  assert(lp != NULL);
+  cpuinfo_list_t d, p = *lp;
+  while (p) {
+	d = p;
+	p = p->next;
+	free(d);
+  }
+  return 0;
+}
+
+// Insert new element into the list
+int (cpuinfo_list_insert)(cpuinfo_list_t *lp, void *ptr, int size)
+{
+  assert(lp != NULL);
+  cpuinfo_list_t p = malloc(sizeof(*p));
+  if (p == NULL)
+	return -1;
+  p->next = *lp;
+  if ((p->data = malloc(size)) == NULL) {
+	free(p);
+	return -1;
+  }
+  memcpy(p->data, ptr, size);
+  *lp = p;
+  return 0;
 }

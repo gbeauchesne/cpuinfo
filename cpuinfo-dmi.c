@@ -218,27 +218,25 @@ static int get_cache(int ofs, cpuinfo_cache_descriptor_t *ccdp)
 
 // Get cache information (initialize with iter = 0, returns the
 // iteration number or -1 if no more information available)
-void cpuinfo_dmi_get_caches(struct cpuinfo *cip)
+cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip)
 {
-#define N_CACHE_DESCRIPTORS 3 /* 3 handles at most, SMBIOS 2.5 */
-  cpuinfo_cache_t *ccp = &cip->cache_info;
-  if ((ccp->descriptors = malloc(N_CACHE_DESCRIPTORS * sizeof(*ccp->descriptors))) == NULL)
-	return;
-  cpuinfo_cache_descriptor_t *ccdp = (cpuinfo_cache_descriptor_t *)ccp->descriptors;
+  cpuinfo_list_t caches_list = NULL;
+  cpuinfo_cache_descriptor_t cache_desc;
 
-  ccp->count = 0;
-  if (get_cache(0x1a, ccdp) == 0) {
-	ccdp->level = 1;
-	ccp->count++;
+  if (get_cache(0x1a, &cache_desc) == 0) {
+	cache_desc.level = 1;
+	cpuinfo_caches_list_insert(&cache_desc);
   }
-  if (get_cache(0x1c, ++ccdp) == 0) {
-	ccdp->level = 2;
-	ccp->count++;
+  if (get_cache(0x1c, &cache_desc) == 0) {
+	cache_desc.level = 2;
+	cpuinfo_caches_list_insert(&cache_desc);
   }
-  if (get_cache(0x1e, ++ccdp) == 0) {
-	ccdp->level = 3;
-	ccp->count++;
+  if (get_cache(0x1e, &cache_desc) == 0) {
+	cache_desc.level = 3;
+	cpuinfo_caches_list_insert(&cache_desc);
   }
+
+  return caches_list;
 }
 
 #endif

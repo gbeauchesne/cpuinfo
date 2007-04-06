@@ -58,15 +58,29 @@ static void cpuid(uint32_t op, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint
   if (edx) *edx = d;
 }
 
+// Arch-dependent data
+struct x86_cpuinfo {
+  uint32_t features[CPUINFO_FEATURES_SZ_(X86)];
+};
+
+typedef struct x86_cpuinfo x86_cpuinfo_t;
+
 // Returns a new cpuinfo descriptor
 int cpuinfo_arch_new(struct cpuinfo *cip)
 {
+  x86_cpuinfo_t *p = malloc(sizeof(*p));
+  if (p == NULL)
+	return -1;
+  memset(p->features, 0, sizeof(p->features));
+  cip->opaque = p;
   return 0;
 }
 
 // Release the cpuinfo descriptor and all allocated data
 void cpuinfo_arch_destroy(struct cpuinfo *cip)
 {
+  if (cip->opaque)
+	free(cip->opaque);
 }
 
 // Get processor vendor ID 
@@ -621,23 +635,21 @@ intel_cache_table[] = {
 #undef C_
 };
 
-int cpuinfo_arch_get_caches(struct cpuinfo *cip)
+cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
   cpuid(0, &cpuid_level, NULL, NULL, NULL);
 
-  int n_caches_alloc = 0;
-  cpuinfo_cache_descriptor_t *ccdp;
-  cpuinfo_cache_t *ccp = &cip->cache_info;
-  ccp->count = 0;
-  ccp->descriptors = NULL;
+  cpuinfo_list_t caches_list = NULL;
+  cpuinfo_cache_descriptor_t cache_desc;
 
   if (cpuid_level >= 4) {
 	// XXX not MP safe cpuid()
 	D(bug("* cpuinfo_get_cache: cpuid(4)\n"));
 	uint32_t eax, ebx, ecx, edx;
+	int count = 0;
 	for (;;) {
-	  ecx = ccp->count;
+	  ecx = count;
 	  cpuid(4, &eax, &ebx, &ecx, &edx);
 	  int cache_type = eax & 0x1f;
 	  if (cache_type == 0)
@@ -648,34 +660,26 @@ int cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	  case 3: cache_type = CPUINFO_CACHE_TYPE_UNIFIED; break;
 	  default: cache_type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
 	  }
-	  if (ccp->count >= n_caches_alloc) {
-		n_caches_alloc += 2;
-		if ((ccp->descriptors = realloc((void *)ccp->descriptors, n_caches_alloc * sizeof(*ccp->descriptors))) == NULL) {
-		  ccp->count = -2;
-		  return;
-		}
-	  }
-	  ccdp = (cpuinfo_cache_descriptor_t *)&ccp->descriptors[ccp->count];
-	  ccdp->type = cache_type;
-	  ccdp->level = (eax >> 5) & 7;
+	  cache_desc.type = cache_type;
+	  cache_desc.level = (eax >> 5) & 7;
 	  uint32_t W = 1 + ((ebx >> 22) & 0x3f);	// ways of associativity
 	  uint32_t P = 1 + ((ebx >> 12) & 0x1f);	// physical line partition
 	  uint32_t L = 1 + (ebx & 0xfff);			// system coherency line size
 	  uint32_t S = 1 + ecx;						// number of sets
-	  ccdp->size = (L * W * P * S) / 1024;
-	  ccp->count++;
+	  cache_desc.size = (L * W * P * S) / 1024;
+	  cpuinfo_caches_list_insert(&cache_desc);
+	  ++count;
 	}
+	return caches_list;
   }
 
-  if (ccp->count == 0 && cpuid_level >= 2) {
+  if (cpuid_level >= 2) {
 	int i, j, k, n;
 	uint32_t regs[4];
 	uint8_t *dp = (uint8_t *)regs;
 	D(bug("* cpuinfo_get_cache: cpuid(2)\n"));
 	cpuid(2, &regs[0], NULL, NULL, NULL);
 	n = regs[0] & 0xff;						// number of times to iterate
-	if ((ccp->descriptors = malloc(n * sizeof(*ccp->descriptors))) == NULL)
-	  return;
 	for (i = 0; i < n; i++) {
 	  cpuid(2, &regs[0], &regs[1], &regs[2], &regs[3]);
 	  for (j = 0; j < 4; j++) {
@@ -686,54 +690,46 @@ int cpuinfo_arch_get_caches(struct cpuinfo *cip)
 		uint8_t desc = dp[j];
 		for (k = 0; intel_cache_table[k].desc != 0; k++) {
 		  if (intel_cache_table[k].desc == desc) {
-			ccdp = (cpuinfo_cache_descriptor_t *)&ccp->descriptors[ccp->count];
-			ccdp->type = intel_cache_table[k].type;
-			ccdp->level = intel_cache_table[k].level;
-			ccdp->size = intel_cache_table[k].size;
+			cache_desc.type = intel_cache_table[k].type;
+			cache_desc.level = intel_cache_table[k].level;
+			cache_desc.size = intel_cache_table[k].size;
+			cpuinfo_caches_list_insert(&cache_desc);
 			D(bug("* %02x\n", desc));
-			ccp->count++;
 			break;
 		  }
 		}
 	  }
 	}
+	return caches_list;
   }
 
-  if (ccp->count == 0) {
-	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
-	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000005) {
-	  if ((ccp->descriptors = malloc(3 * sizeof(*ccp->descriptors))) == NULL)
-		return;
-	  ccdp = (cpuinfo_cache_descriptor_t *)ccp->descriptors;
-	  uint32_t ecx, edx;
-	  D(bug("* cpuinfo_get_cache: cpuid(0x80000005)\n"));
-	  cpuid(0x80000005, NULL, NULL, &ecx, &edx);
-	  ccdp->level = 1;
-	  ccdp->type = CPUINFO_CACHE_TYPE_CODE;
-	  ccdp->size = (edx >> 24) & 0xff;
-	  ccdp++;
-	  ccdp->level = 1;
-	  ccdp->type = CPUINFO_CACHE_TYPE_DATA;
-	  ccdp->size = (ecx >> 24) & 0xff;
-	  ccp->count = 2;
-	  if (cpuid_level >= 0x80000006) {
-		D(bug("* cpuinfo_get_cache: cpuid(0x80000006)\n"));
-		cpuid(0x80000006, NULL, NULL, &ecx, NULL);
-		if (((ecx >> 12) & 0xffff) != 0) {
-		  ccdp++;
-		  ccdp->level = 2;
-		  ccdp->type = CPUINFO_CACHE_TYPE_UNIFIED;
-		  ccdp->size = (ecx >> 16) & 0xffff;
-		  ccp->count++;
-		}
+  cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
+  if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000005) {
+	uint32_t ecx, edx;
+	D(bug("* cpuinfo_get_cache: cpuid(0x80000005)\n"));
+	cpuid(0x80000005, NULL, NULL, &ecx, &edx);
+	cache_desc.level = 1;
+	cache_desc.type = CPUINFO_CACHE_TYPE_CODE;
+	cache_desc.size = (edx >> 24) & 0xff;
+	cpuinfo_caches_list_insert(&cache_desc);
+	cache_desc.level = 1;
+	cache_desc.type = CPUINFO_CACHE_TYPE_DATA;
+	cache_desc.size = (ecx >> 24) & 0xff;
+	cpuinfo_caches_list_insert(&cache_desc);
+	if (cpuid_level >= 0x80000006) {
+	  D(bug("* cpuinfo_get_cache: cpuid(0x80000006)\n"));
+	  cpuid(0x80000006, NULL, NULL, &ecx, NULL);
+	  if (((ecx >> 12) & 0xffff) != 0) {
+		cache_desc.level = 2;
+		cache_desc.type = CPUINFO_CACHE_TYPE_UNIFIED;
+		cache_desc.size = (ecx >> 16) & 0xffff;
+		cpuinfo_caches_list_insert(&cache_desc);
 	  }
 	}
+	return caches_list;
   }
 
-  if (ccp->count == 0)
-	cpuinfo_dmi_get_caches(cip);
-
-  // XXX sort caches
+  return cpuinfo_dmi_get_caches(cip);
 }
 
 static int bsf_clobbers_eflags(void)
@@ -762,6 +758,18 @@ static int bsf_clobbers_eflags(void)
 	}
   }
   return mismatch;
+}
+
+// Returns features table
+uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature)
+{
+  switch (feature & CPUINFO_FEATURE_ARCH) {
+  case CPUINFO_FEATURE_COMMON:
+	return cip->features;
+  case CPUINFO_FEATURE_X86:
+	return ((x86_cpuinfo_t *)(cip->opaque))->features;
+  }
+  return NULL;
 }
 
 #define feature_get_bit(NAME) cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86_##NAME)
