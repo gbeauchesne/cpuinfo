@@ -37,6 +37,10 @@ ifneq ($(DONT_STRIP), yes)
 STRIP_OPT = -s
 endif
 
+ifeq ($(RANLIB),)
+RANLIB = ranlib
+endif
+
 CPPFLAGS	= -I. -I$(SRC_PATH)
 
 libcpuinfo_a = libcpuinfo.a
@@ -73,6 +77,7 @@ install.bins: $(cpuinfo_PROGRAM)
 
 $(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
 	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
+	$(RANLIB) $@
 
 $(archivedir)::
 	[ -d $(archivedir) ] || mkdir $(archivedir) > /dev/null 2>&1
