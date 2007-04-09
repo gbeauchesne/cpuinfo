@@ -233,13 +233,20 @@ static void sigill_handler(int sig)
 // Returns true if function succeeds, false if SIGILL was caught
 int cpuinfo_feature_test_function(void (*func)(void))
 {
-  void (*old_handler)(int) = signal(SIGILL, sigill_handler);
+  struct sigaction old_sigill_sa, sigill_sa;
+  sigemptyset(&sigill_sa.sa_mask);
+  sigill_sa.sa_flags = 0;
+  sigill_sa.sa_handler = sigill_handler;
+  if (sigaction(SIGILL, &sigill_sa, &old_sigill_sa) != 0)
+	return 0;
+
   int has_feature = 0;
   if (setjmp(cpuinfo_env) == 0) {
 	func();
 	has_feature = 1;
   }
-  signal(SIGILL, old_handler);
+
+  sigaction(SIGILL, &old_sigill_sa, NULL);
   return has_feature;
 }
 
