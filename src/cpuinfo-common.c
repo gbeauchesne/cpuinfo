@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <setjmp.h>
 #include <assert.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
@@ -221,6 +223,27 @@ int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
+static jmp_buf cpuinfo_env; // XXX use a lock!
+
+static void sigill_handler(int sig)
+{
+  longjmp(cpuinfo_env, 1);
+}
+
+// Returns true if function succeeds, false if SIGILL was caught
+int cpuinfo_feature_test_function(void (*func)(void))
+{
+  void (*old_handler)(int) = signal(SIGILL, sigill_handler);
+  int has_feature = 0;
+  if (setjmp(cpuinfo_env) == 0) {
+	func();
+	has_feature = 1;
+  }
+  signal(SIGILL, old_handler);
+  return has_feature;
+}
+
+// Accessors for cpuinfo_features[] table
 int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature)
 {
   uint32_t *ftp = cpuinfo_arch_feature_table(cip, feature);
@@ -322,7 +345,8 @@ static const cpuinfo_feature_string_t x86_feature_strings[] = {
 static const cpuinfo_feature_string_t ppc_feature_strings[] = {
   { "[ppc]", "-- ppc-specific features --" },
 #define CPUINFO_(NAME) (CPUINFO_FEATURE_PPC_##NAME & CPUINFO_FEATURE_MASK)
-  [CPUINFO_(ALTIVEC)] = { "altivec", "Altivec" },
+  [CPUINFO_(VMX)] = { "vmx", "Vector instruction set (AltiVec, VMX)" },
+  [CPUINFO_(FSQRT)] = { "fsqrt", "Floating-point Square Root support in hardware" },
 #undef CPUINFO_
 };
 
@@ -374,7 +398,7 @@ int cpuinfo_list_clear(cpuinfo_list_t *lp)
 }
 
 // Insert new element into the list
-int (cpuinfo_list_insert)(cpuinfo_list_t *lp, void *ptr, int size)
+int (cpuinfo_list_insert)(cpuinfo_list_t *lp, const void *ptr, int size)
 {
   assert(lp != NULL);
   cpuinfo_list_t p = malloc(sizeof(*p));
@@ -385,7 +409,7 @@ int (cpuinfo_list_insert)(cpuinfo_list_t *lp, void *ptr, int size)
 	free(p);
 	return -1;
   }
-  memcpy(p->data, ptr, size);
+  memcpy((void *)p->data, ptr, size);
   *lp = p;
   return 0;
 }

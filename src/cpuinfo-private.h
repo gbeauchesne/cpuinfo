@@ -43,7 +43,7 @@ typedef struct cpuinfo cpuinfo_t;
 /* ========================================================================= */
 
 typedef struct cpuinfo_list {
-  void *data;
+  const void *data;
   struct cpuinfo_list *next;
 } *cpuinfo_list_t;
 
@@ -51,7 +51,7 @@ typedef struct cpuinfo_list {
 extern int cpuinfo_list_clear(cpuinfo_list_t *lp);
 
 // Insert new element into the list
-extern int cpuinfo_list_insert(cpuinfo_list_t *lp, void *ptr, int size);
+extern int cpuinfo_list_insert(cpuinfo_list_t *lp, const void *ptr, int size);
 #define cpuinfo_list_insert(LIST, PTR) (cpuinfo_list_insert)(LIST, PTR, sizeof(*(PTR)))
 
 #define cpuinfo_caches_list_insert(PTR) do {		\
@@ -74,6 +74,9 @@ extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip);
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
+
+// Returns true if function succeeds, false if SIGILL was caught
+extern int cpuinfo_feature_test_function(void (*func)(void));
 
 // Accessors for cpuinfo_features[] table
 extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature);
