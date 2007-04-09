@@ -195,6 +195,10 @@ elif test "$host_os" = "netbsd"; then
     echo "OS=netbsd" >> $config_mak
     echo "#define HOST_NETBSD 1" >> $config_h
     echo "#define HOST_OS \"netbsd\"" >> $config_h
+elif test "$host_os" = "darwin"; then
+    echo "OS=darwin" >> $config_mak
+    echo "#define HOST_DARWIN 1" >> $config_h
+    echo "#define HOST_OS \"darwin\"" >> $config_h
 else
     echo "Unsupported OS"
     exit 1
@@ -215,18 +219,6 @@ elif test "$host_cpu" = "ppc64" ; then
     echo "ARCH=ppc64" >> $config_mak
     echo "#define HOST_PPC64 1" >> $config_h
     echo "#define HOST_ARCH \"ppc64\"" >> $config_h
-elif test "$host_cpu" = "sparc" ; then
-    echo "ARCH=sparc" >> $config_mak
-    echo "#define HOST_SPARC 1" >> $config_h
-    echo "#define HOST_ARCH \"sparc\"" >> $config_h
-elif test "$host_cpu" = "sparc64" ; then
-    echo "ARCH=sparc64" >> $config_mak
-    echo "#define HOST_SPARC64 1" >> $config_h
-    echo "#define HOST_ARCH \"sparc64\"" >> $config_h
-elif test "$host_cpu" = "ia64" ; then
-    echo "ARCH=ia64" >> $config_mak
-    echo "#define HOST_IA64 1" >> $config_h
-    echo "#define HOST_ARCH \"ia64\"" >> $config_h
 else
     echo "Unsupported CPU"
     exit 1
