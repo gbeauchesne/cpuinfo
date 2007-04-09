@@ -46,8 +46,11 @@ typedef struct ppc_cpuinfo ppc_cpuinfo_t;
 // CPU caches specifications
 #define DEFINE_CACHE_DESCRIPTOR(NAME, TYPE, LEVEL, SIZE) \
 static const cpuinfo_cache_descriptor_t NAME = { CPUINFO_CACHE_TYPE_##TYPE, LEVEL, SIZE }
-DEFINE_CACHE_DESCRIPTOR(L1D_32KB,	DATA,		1,	  32);
+DEFINE_CACHE_DESCRIPTOR(L1I_16KB,	CODE,		1,	  16);
 DEFINE_CACHE_DESCRIPTOR(L1I_32KB,	CODE,		1,	  32);
+DEFINE_CACHE_DESCRIPTOR(L1D_16KB,	DATA,		1,	  16);
+DEFINE_CACHE_DESCRIPTOR(L1D_32KB,	DATA,		1,	  32);
+DEFINE_CACHE_DESCRIPTOR(L2_512KB,	UNIFIED,	2,	 512);
 DEFINE_CACHE_DESCRIPTOR(L2_1MB,		UNIFIED,	2,	1024);
 #undef DEFINE_CACHE_DESCRIPTOR
 
@@ -66,11 +69,131 @@ struct ppc_spec_entry {
 typedef struct ppc_spec_entry ppc_spec_t;
 
 static const ppc_spec_t ppc_specs[] = {
+  { /* 601 */
+	0xffff0000, 0x00010000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 601",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 603 */
+	0xffff0000, 0x00030000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 603e */
+	0xffff0000, 0x00060000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603e",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 603ev */
+	0xffff0000, 0x00070000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603ev",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 604 */
+	0xffff0000, 0x00040000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 604e */
+	0xfffff000, 0x00090000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604e",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 604r */
+	0xffff0000, 0x00090000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604r",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 604ev */
+	0xffff0000, 0x000a0000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604ev",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750CX */
+	0xfffffff0, 0x00080100,
+	CPUINFO_VENDOR_IBM, "PowerPC 750CX",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750CX */
+	0xfffffff0, 0x00082200,
+	CPUINFO_VENDOR_IBM, "PowerPC 750CX",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750CXe */
+	0xfffffff0, 0x00082210,
+	CPUINFO_VENDOR_IBM, "PowerPC 750CXe",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750FX */
+	0xffff0000, 0x70000000,
+	CPUINFO_VENDOR_IBM, "PowerPC 750FX",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750GX */
+	0xffff0000, 0x70020000,
+	CPUINFO_VENDOR_IBM, "PowerPC 750GX",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 750 */
+	0xffff0000, 0x00080000,
+	CPUINFO_VENDOR_IBM, "PowerPC 750",
+	1, 1,
+	{ NULL, }
+  },
   { /* 7400 */
 	0xffff0000, 0x000c0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7400",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_1MB, }
+  },
+  { /* 7410 */
+	0xffff0000, 0x800c0000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7410",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 7450 */
+	0xffff0000, 0x80000000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7450",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 7455 */
+	0xffff0000, 0x80010000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7455",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 7457 */
+	0xffff0000, 0x80020000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7457",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 7447A */
+	0xffff0000, 0x80030000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7447A",
+	1, 1,
+	{ NULL, }
+  },
+  { /* 7448 */
+	0xffff0000, 0x80040000,
+	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7448",
+	1, 1,
+	{ NULL, }
   },
   { /* Unknown */
 	0x00000000, 0x00000000,
@@ -93,6 +216,14 @@ enum {
   PVR_POWERPC_7450		= 0x80000000,
   PVR_POWERPC_970		= 0x00390000,
 };
+
+// Returns PVR (Linux only)
+static uint32_t get_pvr(void)
+{
+  uint32_t pvr;
+  __asm__ __volatile__ ("mfpvr %0" : "=r" (pvr));
+  return pvr;
+}
 
 // Initialize arch-dependent cpuinfo data structure
 static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
@@ -146,6 +277,30 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 	  case 100:							acip->pvr = PVR_POWERPC_970;	break;
 	  }
 	}
+  }
+#elif defined __linux__
+  if (cpuinfo_feature_test_function((void (*)(void))get_pvr))
+	acip->pvr = get_pvr();
+
+  FILE *proc_file = fopen("/proc/cpuinfo", "r");
+  if (proc_file) {
+	char line[256];
+	while(fgets(line, 255, proc_file)) {
+	  // Read line
+	  int len = strlen(line);
+	  if (len == 0)
+		continue;
+	  line[len-1] = 0;
+
+	  // Parse line
+	  int i;
+	  float f;
+	  if (sscanf(line, "clock : %fMHz", &f) == 1)
+		acip->frequency = (int)f;
+	  else if (sscanf(line, "clock : %dMHz", &i) == 1)
+		acip->frequency = i;
+	}
+	fclose(proc_file);
   }
 #else
   return -1;
@@ -355,8 +510,14 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 	if (cpuinfo_feature_test_function(check_hwcap_vmx))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_VMX);
 
+#ifndef __linux__
+	/* XXX this causes an uncatchable SIGILL... */
 	if (cpuinfo_feature_test_function(check_hwcap_fsqrt))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_FSQRT);
+#endif
+
+	if (cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_PPC_VMX))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
   }
 
   return cpuinfo_feature_get_bit(cip, feature);
