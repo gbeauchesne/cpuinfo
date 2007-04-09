@@ -37,7 +37,6 @@ ifneq ($(DONT_STRIP), yes)
 STRIP_OPT = -s
 endif
 
-CFLAGS		= -O2
 CPPFLAGS	= -I. -I$(SRC_PATH)
 
 libcpuinfo_a = libcpuinfo.a

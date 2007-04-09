@@ -395,7 +395,7 @@ static char *sanitize_brand_id_string(const char *str)
 // Get processor name
 char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 {
-  char *model;
+  char *model = NULL;
 
   switch (cpuinfo_get_vendor(cip)) {
   case CPUINFO_VENDOR_AMD:
@@ -411,7 +411,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
 	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000004) {
 	  D(bug("* cpuinfo_get_model: cpuid(0x80000002)\n"));
-	  union { uint32_t r[13]; char str[52]; } m = { 0, };
+	  union { uint32_t r[13]; char str[52]; } m = { { 0, } };
 	  cpuid(0x80000002, &m.r[0], &m.r[1], &m.r[2], &m.r[3]);
 	  cpuid(0x80000003, &m.r[4], &m.r[5], &m.r[6], &m.r[7]);
 	  cpuid(0x80000004, &m.r[8], &m.r[9], &m.r[10], &m.r[11]);
@@ -509,7 +509,7 @@ static int cpuinfo_get_socket_amd(void)
 
 int cpuinfo_arch_get_socket(struct cpuinfo *cip)
 {
-  int socket;
+  int socket = -1;
 
   if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD)
 	socket = cpuinfo_get_socket_amd();
@@ -523,7 +523,7 @@ int cpuinfo_arch_get_socket(struct cpuinfo *cip)
 // Get number of cores per CPU package
 int cpuinfo_arch_get_cores(struct cpuinfo *cip)
 {
-  uint32_t eax, ebx, ecx, edx;
+  uint32_t eax, ecx;
 
   /* Intel Dual Core characterisation */
   if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_INTEL) {
@@ -550,7 +550,7 @@ int cpuinfo_arch_get_cores(struct cpuinfo *cip)
 // Get number of threads per CPU core
 int cpuinfo_arch_get_threads(struct cpuinfo *cip)
 {
-  uint32_t eax, ebx, ecx, edx;
+  uint32_t eax, ebx, edx;
 
   switch (cpuinfo_get_vendor(cip)) {
   case CPUINFO_VENDOR_INTEL:
