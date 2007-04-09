@@ -231,7 +231,7 @@ static void sigill_handler(int sig)
 }
 
 // Returns true if function succeeds, false if SIGILL was caught
-int cpuinfo_feature_test_function(void (*func)(void))
+int cpuinfo_feature_test_function(cpuinfo_feature_test_function_t func)
 {
   struct sigaction old_sigill_sa, sigill_sa;
   sigemptyset(&sigill_sa.sa_mask);

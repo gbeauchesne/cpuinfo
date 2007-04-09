@@ -232,6 +232,9 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
   acip->frequency = 0;
   memset(acip->features, 0, sizeof(acip->features));
 
+  if (cpuinfo_feature_test_function((cpuinfo_feature_test_function_t)get_pvr))
+	acip->pvr = get_pvr();
+
 #if defined __APPLE__ && defined __MACH__
   FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
   if (proc_file) {
@@ -250,10 +253,14 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 	  else if (powerpc_node) {
 		uint32_t value;
 		char head[256];
-		if (sscanf(line, "%[ |]\"cpu-version\" = <%x>", head, &value) == 2)
-		  acip->pvr = value;
-		else if (sscanf(line, "%[ |]\"clock-frequency\" = <%x>", head, &value) == 2)
-		  acip->frequency = value / (1000 * 1000);
+		if (sscanf(line, "%[ |]\"cpu-version\" = <%x>", head, &value) == 2) {
+		  if (acip->pvr == 0)
+			acip->pvr = value;
+		}
+		else if (sscanf(line, "%[ |]\"clock-frequency\" = <%x>", head, &value) == 2) {
+		  if (acip->frequency == 0)
+			acip->frequency = value / (1000 * 1000);
+		}
 		else if (strchr(line, '}'))
 		  powerpc_node = 0;
 	  }
@@ -279,9 +286,6 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 	}
   }
 #elif defined __linux__
-  if (cpuinfo_feature_test_function((void (*)(void))get_pvr))
-	acip->pvr = get_pvr();
-
   FILE *proc_file = fopen("/proc/cpuinfo", "r");
   if (proc_file) {
 	char line[256];

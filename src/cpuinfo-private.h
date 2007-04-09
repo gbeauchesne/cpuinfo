@@ -75,8 +75,11 @@ extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip);
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
+// Feature test function (expected to SIGILL if opcode is not supported)
+typedef void (*cpuinfo_feature_test_function_t)(void);
+
 // Returns true if function succeeds, false if SIGILL was caught
-extern int cpuinfo_feature_test_function(void (*func)(void));
+extern int cpuinfo_feature_test_function(cpuinfo_feature_test_function_t func);
 
 // Accessors for cpuinfo_features[] table
 extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature);
