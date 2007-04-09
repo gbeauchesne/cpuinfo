@@ -22,12 +22,16 @@ hierarchy along with the usual brand and model names.
 %setup -q
 
 %build
-%configure
+mkdir objs
+pushd objs
+../configure --prefixs=%{_prefix} --libdir=%{_libdir}
+make
+popd
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%makeinstall_std
+make -C objs install DESTDIR=$RPM_BUILD_ROOT
 
 %clean
 rm -rf $RPM_BUILD_ROOT

@@ -37,8 +37,6 @@ ifneq ($(DONT_STRIP), yes)
 STRIP_OPT = -s
 endif
 
-AR		= ar
-CC		= gcc
 CFLAGS		= -O2
 CPPFLAGS	= -I. -I$(SRC_PATH)
 
@@ -71,8 +69,8 @@ install: install.dirs install.bins
 install.dirs:
 	mkdir -p $(DESTDIR)$(bindir)
 
-install.bins: $(PROGS)
-	install -m 755 $(STRIP_OPT) $(PROGS) $(DESTDIR)$(bindir)/
+install.bins: $(cpuinfo_PROGRAM)
+	install -m 755 $(STRIP_OPT) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
 
 $(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
 	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
