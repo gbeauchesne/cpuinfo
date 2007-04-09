@@ -102,8 +102,7 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
   memset(acip->features, 0, sizeof(acip->features));
 
 #if defined __APPLE__ && defined __MACH__
-  //  FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
-  FILE *proc_file = popen("ioreg", "r");
+  FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
   if (proc_file) {
 	char line[256];
 	int powerpc_node = 0;
@@ -123,7 +122,7 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 		if (sscanf(line, "%[ |]\"cpu-version\" = <%x>", head, &value) == 2)
 		  acip->pvr = value;
 		else if (sscanf(line, "%[ |]\"clock-frequency\" = <%x>", head, &value) == 2)
-		  acip->frequency = value / 1024;
+		  acip->frequency = value / (1000 * 1000);
 		else if (strchr(line, '}'))
 		  powerpc_node = 0;
 	  }
@@ -204,7 +203,7 @@ int cpuinfo_arch_get_vendor(struct cpuinfo *cip)
 char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 {
   const ppc_spec_t *spec = get_ppc_spec(cip);
-  if (spec) {
+  if (spec && spec->model) {
 	char *model = malloc(strlen(spec->model) + 1);
 	if (model == NULL)
 	  return NULL;
