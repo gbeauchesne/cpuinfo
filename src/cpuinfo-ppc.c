@@ -373,41 +373,6 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
   return NULL;
 }
 
-// Get host CPU ticks
-static inline uint32_t get_tbl(void)
-{
-  uint32_t tbl;
-  __asm__ __volatile__("mftb %0" : "=r" (tbl));
-  return tbl;
-}
-
-static inline uint32_t get_tbu(void)
-{
-  uint32_t tbu;
-  __asm__ __volatile__("mftbu %0" : "=r" (tbu));
-  return tbu;
-}
-
-static inline uint64_t get_ticks(void)
-{
-  uint32_t l, h, h1;
-  /* NOTE: we test if wrapping has occurred */
-  do {
-	h = get_tbu();
-	l = get_tbl();
-	h1 = get_tbu();
-  } while (h != h1);
-  return ((int64_t)h << 32) | l;
-}
-
-// Get current value of microsecond timer
-static inline uint64_t get_ticks_usec(void)
-{
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return ((uint64_t)tv.tv_sec * 1000000) + tv.tv_usec;
-}
-
 // Get processor frequency in MHz
 int cpuinfo_arch_get_frequency(struct cpuinfo *cip)
 {
@@ -415,20 +380,7 @@ int cpuinfo_arch_get_frequency(struct cpuinfo *cip)
   if (acip->frequency)
 	return acip->frequency;
 
-  uint64_t start, stop;
-  uint64_t ticks_start, ticks_stop;
-
-  start = get_ticks_usec();
-  ticks_start = get_ticks();
-  while ((get_ticks_usec() - start) < 50000) {
-	static unsigned long next = 1;
-	next = next * 1103515245 + 12345;
-  }
-  ticks_stop = get_ticks();
-  stop = get_ticks_usec();
-
-  uint64_t freq = (ticks_stop - ticks_start) / (stop - start);
-  return ((freq % 10) >= 5) ? (((freq / 10) * 10) + 10) : ((freq / 10) * 10);
+  return 0;
 }
 
 // Get processor socket ID
