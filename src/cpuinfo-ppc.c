@@ -49,9 +49,11 @@ static const cpuinfo_cache_descriptor_t NAME = { CPUINFO_CACHE_TYPE_##TYPE, LEVE
 DEFINE_CACHE_DESCRIPTOR(L1I_8KB,	CODE,		1,	   8);
 DEFINE_CACHE_DESCRIPTOR(L1I_16KB,	CODE,		1,	  16);
 DEFINE_CACHE_DESCRIPTOR(L1I_32KB,	CODE,		1,	  32);
+DEFINE_CACHE_DESCRIPTOR(L1I_64KB,	CODE,		1,	  64);
 DEFINE_CACHE_DESCRIPTOR(L1D_8KB,	DATA,		1,	   8);
 DEFINE_CACHE_DESCRIPTOR(L1D_16KB,	DATA,		1,	  16);
 DEFINE_CACHE_DESCRIPTOR(L1D_32KB,	DATA,		1,	  32);
+DEFINE_CACHE_DESCRIPTOR(L1D_64KB,	DATA,		1,	  64);
 DEFINE_CACHE_DESCRIPTOR(L1U_16KB,	UNIFIED,	1,	  16);
 DEFINE_CACHE_DESCRIPTOR(L1U_32KB,	UNIFIED,	1,	  32);
 DEFINE_CACHE_DESCRIPTOR(L2_256KB,	UNIFIED,	2,	 256);
@@ -74,176 +76,206 @@ struct ppc_spec_entry {
 typedef struct ppc_spec_entry ppc_spec_t;
 
 static const ppc_spec_t ppc_specs[] = {
-  { /* 601 */
+  { /* PowerPC 601 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC601.pdf> */
 	0xffff0000, 0x00010000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 601",
 	1, 1,
 	{ &L1U_32KB }
   },
-  { /* 603 */
+  { /* PowerPC 603 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC603.pdf> */
 	0xffff0000, 0x00030000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603",
 	1, 1,
 	{ &L1I_8KB, &L1D_8KB }
   },
-  { /* 603e */
+  { /* PowerPC 603e */
 	/* <http://www.freescale.com/files/32bit/doc/prod_brief/MPC603E.pdf> */
 	0xffff0000, 0x00060000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603e",
 	1, 1,
 	{ &L1I_16KB, &L1D_16KB }
   },
-  { /* 603ev */
+  { /* PowerPC 603ev */
 	0xffff0000, 0x00070000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 603ev",
 	1, 1,
 	{ &L1I_16KB, &L1D_16KB }
   },
-  { /* 604 */
+  { /* PowerPC 604 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC604.pdf> */
 	0xffff0000, 0x00040000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604",
 	1, 1,
 	{ &L1I_16KB, &L1D_16KB }
   },
-  { /* 604e */
+  { /* PowerPC 604e */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC604E.pdf> */
 	0xfffff000, 0x00090000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604e",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB }
   },
-  { /* 604r */
+  { /* PowerPC 604r */
 	0xffff0000, 0x00090000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604r",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB }
   },
-  { /* 604ev */
+  { /* PowerPC 604ev */
 	0xffff0000, 0x000a0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 604ev",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB }
   },
-  { /* 750CX */
+  { /* PowerPC 750CX */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/220134650EDFEB9187256AE8006CF163/$file/sw_ds_general.pdf> */
 	0xfffffff0, 0x00080100,
 	CPUINFO_VENDOR_IBM, "PowerPC 750CX",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
-  { /* 750CX */
+  { /* PowerPC 750CX */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/220134650EDFEB9187256AE8006CF163/$file/sw_ds_general.pdf> */
 	0xfffffff0, 0x00082200,
 	CPUINFO_VENDOR_IBM, "PowerPC 750CX",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
-  { /* 750CXe */
+  { /* PowerPC 750CXe */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/31777DF6FD56656387256B1B0076E671/$file/750cxedd3.1_ds.pdf> */
 	0xfffffff0, 0x00082210,
 	CPUINFO_VENDOR_IBM, "PowerPC 750CXe",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
-  { /* 750CXr */
+  { /* PowerPC 750CXr */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/A07229E92706089A87256DCD005BFBE9/$file/sw_ds_750cxr2-28-05.pdf> */
 	0xfffffff0, 0x00083410,
 	CPUINFO_VENDOR_IBM, "PowerPC 750CXr",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
-  { /* 750FX */
+  { /* PowerPC 750FX */
 	0xffff0000, 0x70000000,
 	CPUINFO_VENDOR_IBM, "PowerPC 750FX",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
-  { /* 750FL */
+  { /* PowerPC 750FL */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/ED29A8828F4E10AB87256FDA00742D1D/$file/750FL_DS_6-22-06.pdf> */
 	0xffffffff, 0x700a02b3,
 	CPUINFO_VENDOR_IBM, "PowerPC 750FL",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
-  { /* 750FX */
+  { /* PowerPC 750FX */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/A571994FDFA77C3287256C31004AF7CD/$file/750fxdd2_ds.pdf> */
 	0xffffff00, 0x700a0200,
 	CPUINFO_VENDOR_IBM, "PowerPC 750FX",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
-  { /* 750GL */
+  { /* PowerPC 750GL */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/6C89C8231496F8198725700E00776940/$file/750GL_ds3-13-06.pdf> */
 	0xffffff0f, 0x70020102,
 	CPUINFO_VENDOR_IBM, "PowerPC 750GL",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_1MB }
   },
-  { /* 750GX */
+  { /* PowerPC 750GX */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/4D86B2273E8218CE87256E660058763D/$file/750GX_ds9-2-05.pdf> */
 	0xffff0000, 0x70020000,
 	CPUINFO_VENDOR_IBM, "PowerPC 750GX",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_1MB }
   },
-  { /* 750 */
+  { /* PowerPC 750 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC750EC.pdf> */
 	0xffff0000, 0x00080000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 750",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
   },
-  { /* 7400 */
+  { /* PowerPC 7400 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7400EC.pdf> */
 	0xffff0000, 0x000c0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7400",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
   },
-  { /* 7410 */
+  { /* PowerPC 7410 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7410EC.pdf> */
 	0xffff0000, 0x800c0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7410",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
   },
-  { /* 7450 */
+  { /* PowerPC 7450 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7450EC.pdf> */
 	0xffff0000, 0x80000000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7450",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB } /* XXX: external L3 cache, check L3CR? */
   },
-  { /* 7455 */
+  { /* PowerPC 7455 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7455EC.pdf> */
 	0xffff0000, 0x80010000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7455",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB } /* XXX: external L3 cache, check L3CR? */
   },
-  { /* 7457 */
+  { /* PowerPC 7457 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7457EC.pdf> */
 	0xffff0000, 0x80020000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7457",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB } /* XXX: external L3 cache, check L3CR? */
   },
-  { /* 7447A */
+  { /* PowerPC 7447A */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7447AEC.pdf> */
 	0xffff0000, 0x80030000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7447A",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
-  { /* 7448 */
+  { /* PowerPC 7448 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7448EC.pdf> */
 	0xffff0000, 0x80040000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7448",
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_1MB }
+  },
+  {
+	/* PowerPC 970 */
+	0xffff0000, 0x00390000,
+	CPUINFO_VENDOR_IBM, "PowerPC 970",
+	1, 1,
+	{ &L1I_64KB, &L1D_32KB, &L2_512KB }
+  },
+  {
+	/* PowerPC 970FX */
+	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/1DE505664D202D2987256D9C006B90A5/$file/PPC970FX_DS_DD3.X_V2.5_26MAR2007_pub.pdf> */
+	0xffff0000, 0x003c0000,
+	CPUINFO_VENDOR_IBM, "PowerPC 970FX",
+	1, 1,
+	{ &L1I_64KB, &L1D_32KB, &L2_512KB }
+  },
+  {
+	/* PowerPC 970MP */
+	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/B9C08F2F7CF5709587256F8C006727F1/$file/970MP_DS_DD1.1x_v1.1_pub_29Mar2007.pdf> */
+	0xffff0000, 0x00440000,
+	CPUINFO_VENDOR_IBM, "PowerPC 970MP",
+	2, 1,
+	{ &L1I_64KB, &L1D_32KB, &L2_1MB }
+  },
+  {
+	/* Cell PPE */
+	0xffff0000, 0x00700000,
+	CPUINFO_VENDOR_IBM, "Cell",
+	1, 2,
+	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
   { /* Unknown */
 	0x00000000, 0x00000000,
