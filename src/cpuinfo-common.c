@@ -186,9 +186,9 @@ const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
   if (cip == NULL)
 	return NULL;
   if (cip->cache_info.count < 0) {
-	cpuinfo_list_t caches_list = cpuinfo_arch_get_caches(cip);
-	cpuinfo_cache_descriptor_t *descs = NULL;
 	int count = 0;
+	cpuinfo_cache_descriptor_t *descs = NULL;
+	cpuinfo_list_t caches_list = cpuinfo_arch_get_caches(cip);
 	if (caches_list) {
 	  int i;
 	  cpuinfo_list_t p = caches_list;

@@ -466,11 +466,8 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 	if (cpuinfo_feature_test_function(check_hwcap_vmx))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_VMX);
 
-#ifndef __linux__
-	/* XXX this causes an uncatchable SIGILL... */
 	if (cpuinfo_feature_test_function(check_hwcap_fsqrt))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_FSQRT);
-#endif
 
 	if (cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_PPC_VMX))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
