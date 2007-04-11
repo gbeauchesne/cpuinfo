@@ -70,8 +70,12 @@ int main(void)
 		printf("  Trace cache, %dK uOps", ccdp->size);
 	  else {
 		printf("  L%d %s cache, ", ccdp->level, cpuinfo_string_of_cache_type(ccdp->type));
-		if (ccdp->size > 1024)
-		  printf("%.2f MB", (double)ccdp->size / 1024.0);
+		if (ccdp->size >= 1024) {
+		  if ((ccdp->size % 1024) == 0)
+			printf("%d MB", ccdp->size / 1024);
+		  else
+			printf("%.2f MB", (double)ccdp->size / 1024.0);
+		}
 		else
 		  printf("%d KB", ccdp->size);
 	  }
