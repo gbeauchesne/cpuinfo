@@ -50,6 +50,11 @@ x86_64|amd64)
     host_cpu="unknown"
     ;;
 esac
+case "$host_os" in
+cygwin*)
+    host_os="windows"
+    ;;
+esac
 
 # find source path
 # XXX: we assume an absolute path is given when launching configure, 
@@ -199,6 +204,10 @@ elif test "$host_os" = "darwin"; then
     echo "OS=darwin" >> $config_mak
     echo "#define HOST_DARWIN 1" >> $config_h
     echo "#define HOST_OS \"darwin\"" >> $config_h
+elif test "$host_os" = "windows"; then
+    echo "OS=windows" >> $config_mak
+    echo "#define HOST_WINDOWS 1" >> $config_h
+    echo "#define HOST_OS \"windows\"" >> $config_h
 else
     echo "Unsupported OS"
     exit 1
