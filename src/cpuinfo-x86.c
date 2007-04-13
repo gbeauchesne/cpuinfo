@@ -470,7 +470,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 	uint32_t cpuid_level;
 	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
 	if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000004) {
-	  D(bug("* cpuinfo_get_model: cpuid(0x80000002)\n"));
+	  D(bug("cpuinfo_get_model: cpuid(0x80000002)\n"));
 	  union { uint32_t r[13]; char str[52]; } m = { { 0, } };
 	  cpuid(0x80000002, &m.r[0], &m.r[1], &m.r[2], &m.r[3]);
 	  cpuid(0x80000003, &m.r[4], &m.r[5], &m.r[6], &m.r[7]);
@@ -571,7 +571,7 @@ static int cpuinfo_get_socket_amd(void)
 	  socket = CPUINFO_SOCKET_940;
 	  break;
 	default:
-	  D(bug("* K8 cpuid(1) => %08x\n", eax));
+	  D(bug("K8 cpuid(1) => %08x\n", eax));
 	  break;
 	}
 	switch ((eax >> 16) & 0xf) {
@@ -733,7 +733,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 
   if (cpuid_level >= 4) {
 	// XXX not MP safe cpuid()
-	D(bug("* cpuinfo_get_cache: cpuid(4)\n"));
+	D(bug("cpuinfo_get_cache: cpuid(4)\n"));
 	uint32_t eax, ebx, ecx, edx;
 	int count = 0;
 	int saw_L1I_cache = 0;
@@ -771,7 +771,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	int i, j, k, n;
 	uint32_t regs[4];
 	uint8_t *dp = (uint8_t *)regs;
-	D(bug("* cpuinfo_get_cache: cpuid(2)\n"));
+	D(bug("cpuinfo_get_cache: cpuid(2)\n"));
 	cpuid(2, &regs[0], NULL, NULL, NULL);
 	n = regs[0] & 0xff;						// number of times to iterate
 	for (i = 0; i < n; i++) {
@@ -788,7 +788,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 			cache_desc.level = intel_cache_table[k].level;
 			cache_desc.size = intel_cache_table[k].size;
 			cpuinfo_caches_list_insert(&cache_desc);
-			D(bug("* %02x\n", desc));
+			D(bug("%02x\n", desc));
 			break;
 		  }
 		}
@@ -800,7 +800,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
   cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
   if ((cpuid_level & 0xffff0000) == 0x80000000 && cpuid_level >= 0x80000005) {
 	uint32_t ecx, edx;
-	D(bug("* cpuinfo_get_cache: cpuid(0x80000005)\n"));
+	D(bug("cpuinfo_get_cache: cpuid(0x80000005)\n"));
 	cpuid(0x80000005, NULL, NULL, &ecx, &edx);
 	cache_desc.level = 1;
 	cache_desc.type = CPUINFO_CACHE_TYPE_CODE;
@@ -811,7 +811,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	cache_desc.size = (ecx >> 24) & 0xff;
 	cpuinfo_caches_list_insert(&cache_desc);
 	if (cpuid_level >= 0x80000006) {
-	  D(bug("* cpuinfo_get_cache: cpuid(0x80000006)\n"));
+	  D(bug("cpuinfo_get_cache: cpuid(0x80000006)\n"));
 	  cpuid(0x80000006, NULL, NULL, &ecx, NULL);
 	  if (((ecx >> 12) & 0xffff) != 0) {
 		cache_desc.level = 2;

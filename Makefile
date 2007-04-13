@@ -52,7 +52,7 @@ CC_FOR_SHARED	= DYLD_LIBRARY_PATH=. $(CC)
 endif
 
 libcpuinfo_a		= libcpuinfo.a
-libcpuinfo_a_SOURCES	= cpuinfo-common.c cpuinfo-x86.c cpuinfo-ppc.c cpuinfo-dmi.c
+libcpuinfo_a_SOURCES	= debug.c cpuinfo-common.c cpuinfo-x86.c cpuinfo-ppc.c cpuinfo-dmi.c
 libcpuinfo_a_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.o)
 
 libcpuinfo_so_major	= 1

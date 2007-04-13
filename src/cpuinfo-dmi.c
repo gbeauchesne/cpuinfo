@@ -136,7 +136,7 @@ static int dmi_socket(uint8_t *data, int *p_socket)
 
   if (dm->type == 4) {
 	int socket = CPUINFO_SOCKET_UNKNOWN;
-	D(bug("* dmi_socket %02x\n", data[0x19]));
+	D(bug("dmi_socket %02x\n", data[0x19]));
 	switch (data[0x19]) {
 	case 0x0f:	socket = CPUINFO_SOCKET_478;	break;
 	case 0x10:	socket = CPUINFO_SOCKET_754;	break;
@@ -173,7 +173,7 @@ static int dmi_cache_handle(uint8_t *data, uint16_t *p_handle)
   if (dm->type == 4) {
 	int ofs = *p_handle;
 	*p_handle = (data[ofs + 1] << 8) | data[ofs];
-	D(bug("* dmi_cache_handle %04x\n", *p_handle));
+	D(bug("dmi_cache_handle %04x\n", *p_handle));
 	return -1;
   }
 
@@ -193,7 +193,7 @@ static int dmi_cache_info(uint8_t *data, cpuinfo_cache_descriptor_t *ccdp)
 	default: ccdp->type = CPUINFO_CACHE_TYPE_UNKNOWN; break;
 	}
 	uint16_t installed_size = (data[0x0a] << 8) | data[0x09];
-	D(bug("* dmi_cache_info %02x, %04x\n", cache_type, installed_size));
+	D(bug("dmi_cache_info %02x, %04x\n", cache_type, installed_size));
 	ccdp->size = installed_size & 0x7fff;		// 1K granularity (default)
 	if (installed_size & 0x8000)
 	  ccdp->size *= 64;							// 64K granularity

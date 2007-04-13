@@ -1,5 +1,5 @@
 /*
- *  debug.h - Debugging utilities
+ *  debug.c - Debugging utilities
  *
  *  cpuinfo (C) 2006-2007 Gwenole Beauchesne
  *
@@ -18,17 +18,25 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#include "sysdeps.h"
+#include <stdarg.h>
+#include "debug.h"
 
-extern void cpuinfo_set_debug_file(FILE *debug_file) attribute_hidden;
-extern void cpuinfo_dprintf(const char *format, ...) attribute_hidden;
 
-#if DEBUG
-#define bug cpuinfo_dprintf
-#define D(x) x
-#else
-#define D(x) ;
-#endif
+static FILE *g_debug_file = NULL;
 
-#endif /* DEBUG_H */
+void cpuinfo_set_debug_file(FILE *debug_file)
+{
+  g_debug_file = debug_file;
+}
+
+void cpuinfo_dprintf(const char *format, ...)
+{
+  if (g_debug_file) {
+	va_list args;
+	va_start(args, format);
+	fprintf(g_debug_file, "* ");
+	vfprintf(g_debug_file, format, args);
+	va_end(args);
+  }
+}

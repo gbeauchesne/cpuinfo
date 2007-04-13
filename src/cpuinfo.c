@@ -148,6 +148,9 @@ int main(int argc, char *argv[])
 	}
   }
 
+  if (out_filename)
+	cpuinfo_set_debug_file(out);
+
   print_cpuinfo(cip, out);
 
   if (out_filename) { /* debug mode */
