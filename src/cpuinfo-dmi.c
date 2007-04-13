@@ -34,7 +34,7 @@
 
 #define DEFAULT_MEM_DEV "/dev/mem"
 
-void *mem_chunk(uint32_t base, uint32_t len, const char *devmem)
+static void *mem_chunk(uint32_t base, uint32_t len, const char *devmem)
 {
   int fd;
   void *p;

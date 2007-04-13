@@ -37,21 +37,44 @@ ifneq ($(DONT_STRIP), yes)
 STRIP_OPT = -s
 endif
 
+ifeq ($(LN),)
+LN = ln
+endif
 ifeq ($(RANLIB),)
 RANLIB = ranlib
 endif
 
 CPPFLAGS	= -I. -I$(SRC_PATH)
+PICFLAGS	= -fPIC
 
-libcpuinfo_a = libcpuinfo.a
-libcpuinfo_a_SOURCES = cpuinfo-common.c cpuinfo-x86.c cpuinfo-ppc.c cpuinfo-dmi.c
-libcpuinfo_a_OBJECTS = $(libcpuinfo_a_SOURCES:%.c=%.o)
+libcpuinfo_a		= libcpuinfo.a
+libcpuinfo_a_SOURCES	= cpuinfo-common.c cpuinfo-x86.c cpuinfo-ppc.c cpuinfo-dmi.c
+libcpuinfo_a_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.o)
+
+libcpuinfo_so_major	= 0
+libcpuinfo_so_minor	= 0
+libcpuinfo_so		= libcpuinfo.so
+libcpuinfo_so_SONAME	= $(libcpuinfo_so).$(libcpuinfo_so_major)
+libcpuinfo_so_LTLIBRARY	= $(libcpuinfo_so).$(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
+libcpuinfo_so_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.os)
 
 cpuinfo_PROGRAM	= cpuinfo
 cpuinfo_SOURCES	= cpuinfo.c
 cpuinfo_OBJECTS	= $(cpuinfo_SOURCES:%.c=%.o)
+ifeq ($(build_static),yes)
+cpuinfo_DEPS	= $(libcpuinfo_a)
+cpuinfo_LDFLAGS	= $(libcpuinfo_a)
+else
+cpuinfo_OBJECTS += $(libcpuinfo_a_OBJECTS)
+endif
 
 TARGETS		= $(cpuinfo_PROGRAM)
+ifeq ($(build_static),yes)
+TARGETS		+= $(libcpuinfo_a)
+endif
+ifeq ($(build_shared),yes)
+TARGETS		+= $(libcpuinfo_so)
+endif
 
 archivedir	= files/
 SRCARCHIVE	= $(PACKAGE)-$(VERSION)$(VERSION_SUFFIX).tar
@@ -64,9 +87,10 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS) *.o *.os
 	rm -f $(libcpuinfo_a) $(libcpuinfo_a_OBJECTS)
+	rm -f $(libcpuinfo_so) $(libcpuinfo_so_LTLIBRARY) $(libcpuinfo_so_OBJECTS)
 
-$(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(libcpuinfo_a)
-	$(CC) -o $@ $(cpuinfo_OBJECTS) $(libcpuinfo_a) $(LDFLAGS)
+$(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(cpuinfo_DEPS)
+	$(CC) -o $@ $(cpuinfo_OBJECTS) $(cpuinfo_LDFLAGS) $(LDFLAGS)
 
 install: install.dirs install.bins
 install.dirs:
@@ -74,10 +98,6 @@ install.dirs:
 
 install.bins: $(cpuinfo_PROGRAM)
 	install -m 755 $(STRIP_OPT) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
-
-$(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
-	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
-	$(RANLIB) $@
 
 $(archivedir)::
 	[ -d $(archivedir) ] || mkdir $(archivedir) > /dev/null 2>&1
@@ -117,3 +137,16 @@ changelog: ../common/authors.xml
 
 %.o: $(SRC_PATH)/src/%.c
 	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS)
+
+%.os: $(SRC_PATH)/src/%.c
+	$(CC) -c $< -o $@  $(CPPFLAGS) $(CFLAGS) $(PICFLAGS)
+
+$(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
+	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
+	$(RANLIB) $@
+
+$(libcpuinfo_so): $(libcpuinfo_so_LTLIBRARY)
+	$(LN) -sf $< $@
+
+$(libcpuinfo_so_LTLIBRARY): $(libcpuinfo_so_OBJECTS)
+	$(CC) -o $@ -shared -Wl,-soname,$(libcpuinfo_so_SONAME) $(libcpuinfo_so_OBJECTS)
