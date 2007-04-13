@@ -71,7 +71,7 @@ static void print_cpuinfo(struct cpuinfo *cip, FILE *out)
 	for (i = 0; i < ccp->count; i++) {
 	  const cpuinfo_cache_descriptor_t *ccdp = &ccp->descriptors[i];
 	  if (ccdp->level == 0 && ccdp->type == CPUINFO_CACHE_TYPE_TRACE)
-		fprintf(out, "  Trace cache, %dK uOps", ccdp->size);
+		fprintf(out, "  Instruction trace cache, %dK uOps", ccdp->size);
 	  else {
 		fprintf(out, "  L%d %s cache, ", ccdp->level, cpuinfo_string_of_cache_type(ccdp->type));
 		if (ccdp->size >= 1024) {

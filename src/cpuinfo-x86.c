@@ -736,6 +736,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	D(bug("* cpuinfo_get_cache: cpuid(4)\n"));
 	uint32_t eax, ebx, ecx, edx;
 	int count = 0;
+	int saw_L1I_cache = 0;
 	for (;;) {
 	  ecx = count;
 	  cpuid(4, &eax, &ebx, &ecx, &edx);
@@ -757,8 +758,13 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	  cache_desc.size = (L * W * P * S) / 1024;
 	  cpuinfo_caches_list_insert(&cache_desc);
 	  ++count;
+	  if (cache_desc.type == CPUINFO_CACHE_TYPE_CODE && cache_desc.level == 1)
+		saw_L1I_cache = 1;
 	}
-	return caches_list;
+	/* XXX find a better way to detect 'Instruction Trace Cache'-based processors? */
+	if (saw_L1I_cache)
+	  return caches_list;
+	cpuinfo_list_clear(&caches_list);
   }
 
   if (cpuid_level >= 2) {

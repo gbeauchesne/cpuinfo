@@ -406,6 +406,7 @@ int cpuinfo_list_clear(cpuinfo_list_t *lp)
 	p = p->next;
 	free(d);
   }
+  *lp = NULL;
   return 0;
 }
 
