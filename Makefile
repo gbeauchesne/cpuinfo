@@ -46,16 +46,29 @@ endif
 
 CPPFLAGS	= -I. -I$(SRC_PATH)
 PICFLAGS	= -fPIC
+ifeq ($(OS),darwin)
+PICFLAGS	= -fno-common
+endif
 
 libcpuinfo_a		= libcpuinfo.a
 libcpuinfo_a_SOURCES	= cpuinfo-common.c cpuinfo-x86.c cpuinfo-ppc.c cpuinfo-dmi.c
 libcpuinfo_a_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.o)
 
-libcpuinfo_so_major	= 0
+libcpuinfo_so_major	= 1
 libcpuinfo_so_minor	= 0
 libcpuinfo_so		= libcpuinfo.so
 libcpuinfo_so_SONAME	= $(libcpuinfo_so).$(libcpuinfo_so_major)
 libcpuinfo_so_LTLIBRARY	= $(libcpuinfo_so).$(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
+libcpuinfo_so_LDFLAGS	= -shared -Wl,-soname,$(libcpuinfo_so_SONAME)
+ifeq ($(OS),darwin)
+libcpuinfo_so		= libcpuinfo.$(libcpuinfo_so_major).dylib
+libcpuinfo_so_VERSION	= $(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
+libcpuinfo_so_LTLIBRARY	= libcpuinfo.$(libcpuinfo_so_VERSION).dylib
+libcpuinfo_so_LDFLAGS	= -dynamiclib \
+			  -install_name $(libdir)/$(libcpuinfo_so) \
+			  -compatibility_version $(libcpuinfo_so_major).$(libcpuinfo_so_minor) \
+			  -current_version $(libcpuinfo_so_VERSION)
+endif
 libcpuinfo_so_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.os)
 
 cpuinfo_PROGRAM	= cpuinfo
@@ -149,4 +162,4 @@ $(libcpuinfo_so): $(libcpuinfo_so_LTLIBRARY)
 	$(LN) -sf $< $@
 
 $(libcpuinfo_so_LTLIBRARY): $(libcpuinfo_so_OBJECTS)
-	$(CC) -o $@ -shared -Wl,-soname,$(libcpuinfo_so_SONAME) $(libcpuinfo_so_OBJECTS)
+	$(CC) -o $@ $(libcpuinfo_so_OBJECTS) $(libcpuinfo_so_LDFLAGS) 
