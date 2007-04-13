@@ -19,7 +19,13 @@
  */
 
 #include "sysdeps.h"
+#include <errno.h>
+#include <dirent.h>
+#include <limits.h>
+#include <inttypes.h>
+#include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
 
@@ -469,6 +475,143 @@ void cpuinfo_arch_destroy(struct cpuinfo *cip)
 {
   if (cip->opaque)
 	free(cip->opaque);
+}
+
+// Read OF property
+enum {
+  OF_PROP_TYPE_INVALID = -1,
+  OF_PROP_TYPE_INT_AUTO,
+  OF_PROP_TYPE_INT_32,
+  OF_PROP_TYPE_INT_64,
+  OF_PROP_TYPE_STRING,
+};
+
+typedef char oftree_string_t[256];
+
+typedef struct oftree_property {
+  const char *node;
+  void *var;
+  int type;
+} oftree_property_t;
+
+static int get_property(oftree_property_t *pnode, const char *path)
+{
+  int ret = -1;
+  FILE *fp = fopen(path, "r");
+  if (fp) {
+	int type = pnode->type;
+	if (type == OF_PROP_TYPE_INT_AUTO) {
+	  fseek(fp, 0, SEEK_END);
+	  switch (ftell(fp)) {
+	  case 4: type = OF_PROP_TYPE_INT_32; break;
+	  case 8: type = OF_PROP_TYPE_INT_64; break;
+	  default: goto out;
+	  }
+	  fseek(fp, 0, SEEK_SET);
+	}
+	switch (type) {
+	case OF_PROP_TYPE_INT_32: {
+	  uint32_t value;
+	  if (fread(&value, sizeof(value), 1, fp) == 1)
+		*((uint32_t *)(pnode->var)) = value;
+	  break;
+	}
+	case OF_PROP_TYPE_INT_64: {
+	  uint64_t value;
+	  if (fread(&value, sizeof(value), 1, fp) == 1)
+		*((uint64_t *)(pnode->var)) = value;
+	  break;
+	}
+	case OF_PROP_TYPE_STRING: {
+	  char *str = (char *)pnode->var;
+	  if (fgets(str, sizeof(oftree_string_t), fp) == NULL)
+		strcpy(str, "<unknown>");
+	  break;
+	}
+	}
+	pnode->type = type;
+	ret = 0;
+  out:
+	fclose(fp);
+  }
+  return ret;
+}
+
+// Dump all useful information for debugging
+int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
+{
+  if (cip == NULL)
+	return -1;
+
+  uint64_t clock_frequency = 0, timebase_frequency = 0;
+  uint32_t d_cache_size = 0, d_cache_line_size = 0;
+  uint32_t i_cache_size = 0, i_cache_line_size = 0;
+  uint32_t l2cr = 0, l3cr = 0;
+  oftree_string_t cpu_name;
+
+  oftree_property_t oftree_props[] = {
+	{ "clock-frequency",		&clock_frequency,		OF_PROP_TYPE_INT_AUTO, },
+	{ "timebase-frequency",		&timebase_frequency,	OF_PROP_TYPE_INT_AUTO },
+	{ "d-cache-size",			&d_cache_size,			OF_PROP_TYPE_INT_32 },
+	{ "d-cache-line-size",		&d_cache_line_size,		OF_PROP_TYPE_INT_32 },
+	{ "i-cache-size",			&i_cache_size,			OF_PROP_TYPE_INT_32 },
+	{ "i-cache-line-size",		&i_cache_line_size,		OF_PROP_TYPE_INT_32 },
+	{ "l2cr",					&l2cr,					OF_PROP_TYPE_INT_32 },
+	{ "l3cr",					&l3cr,					OF_PROP_TYPE_INT_32 },
+	{ "name",					&cpu_name,				OF_PROP_TYPE_STRING },
+	{ NULL, }
+  };
+
+  int i;
+  int n_cpus = 0;
+  char path[PATH_MAX];
+  struct dirent *de;
+  static const char oftree_cpus[] = "/proc/device-tree/cpus";
+  DIR *d = opendir(oftree_cpus);
+  while ((de = readdir(d)) != NULL) {
+	if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+	  continue;
+	struct stat st;
+	int ret = snprintf(path, sizeof(path), "%s/%s", oftree_cpus, de->d_name);
+	if (ret < 0 || ret >= sizeof(path))
+	  continue;
+	stat(path, &st);
+	if (!S_ISDIR(st.st_mode))
+	  continue;
+	++n_cpus;
+	if (n_cpus == 1) {
+	  for (i = 0; oftree_props[i].node != NULL; i++) {
+		oftree_property_t *pnode = &oftree_props[i];
+		int ret = snprintf(path, sizeof(path), "%s/%s/%s", oftree_cpus, de->d_name, pnode->node);
+		if (ret < 0 || ret >= sizeof(path))
+		  continue;
+		if (get_property(pnode, path) < 0)
+		  D(bug("failed to read property %s\n", path));
+	  }
+	}
+  }
+  fprintf(out, "System with %d CPUs\n", n_cpus);
+  fprintf(out, "\n");
+
+  ppc_cpuinfo_t *acip = (ppc_cpuinfo_t *)(cip->opaque);
+  fprintf(out, "%-30s %08x\n", "pvr", acip->pvr);
+
+  for (i = 0; oftree_props[i].node != NULL; i++) {
+	oftree_property_t *pnode = &oftree_props[i];
+	switch (pnode->type) {
+	case OF_PROP_TYPE_INT_32:
+	  fprintf(out, "%-30s %08x\n", pnode->node, *((uint32_t *)(pnode->var)));
+	  break;
+	case OF_PROP_TYPE_INT_64:
+	  fprintf(out, "%-30s %" PRIx64 "\n", pnode->node, *((uint64_t *)(pnode->var)));
+	  break;
+	case OF_PROP_TYPE_STRING:
+	  fprintf(out, "%-30s '%s'\n", pnode->node, (char *)pnode->var);
+	  break;
+	}
+  }
+
+  return 0;
 }
 
 // Get CPU spec
