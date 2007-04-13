@@ -133,13 +133,13 @@ install.bins: $(cpuinfo_PROGRAM)
 install.libs: install.libs.static install.libs.shared
 ifeq ($(build_static),yes)
 install.libs.static: $(libcpuinfo_a)
-	$(INSTALL) -m 644 $< $(DESTDIR)$(libdir)/
+	$(INSTALL) -m 644 $(STRIP_OPT) $< $(DESTDIR)$(libdir)/
 else
 install.libs.static:
 endif
 ifeq ($(build_shared),yes)
 install.libs.shared: $(libcpuinfo_so)
-	$(INSTALL) -m 755 $(libcpuinfo_so_LTLIBRARY) $(DESTDIR)$(libdir)/
+	$(INSTALL) -m 755 $(STRIP_OPT) $(libcpuinfo_so_LTLIBRARY) $(DESTDIR)$(libdir)/
 	$(LN) -sf $(libcpuinfo_so_LTLIBRARY) $(DESTDIR)$(libdir)/$(libcpuinfo_so_SONAME)
 	$(LN) -sf $(libcpuinfo_so_SONAME) $(DESTDIR)$(libdir)/$(libcpuinfo_so)
 else
