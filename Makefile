@@ -43,11 +43,16 @@ endif
 ifeq ($(RANLIB),)
 RANLIB = ranlib
 endif
+ifeq ($(INSTALL),)
+INSTALL = install
+endif
 
 CPPFLAGS	= -I. -I$(SRC_PATH)
 PICFLAGS	= -fPIC
+CC_FOR_SHARED	= $(CC)
 ifeq ($(OS),darwin)
 PICFLAGS	= -fno-common
+CC_FOR_SHARED	= DYLD_LIBRARY_PATH=. $(CC)
 endif
 
 libcpuinfo_a		= libcpuinfo.a
@@ -61,11 +66,12 @@ libcpuinfo_so_SONAME	= $(libcpuinfo_so).$(libcpuinfo_so_major)
 libcpuinfo_so_LTLIBRARY	= $(libcpuinfo_so).$(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
 libcpuinfo_so_LDFLAGS	= -shared -Wl,-soname,$(libcpuinfo_so_SONAME)
 ifeq ($(OS),darwin)
-libcpuinfo_so		= libcpuinfo.$(libcpuinfo_so_major).dylib
+libcpuinfo_so		= libcpuinfo.dylib
+libcpuinfo_so_SONAME	= libcpuinfo.$(libcpuinfo_so_major).dylib
 libcpuinfo_so_VERSION	= $(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
 libcpuinfo_so_LTLIBRARY	= libcpuinfo.$(libcpuinfo_so_VERSION).dylib
 libcpuinfo_so_LDFLAGS	= -dynamiclib \
-			  -install_name $(libdir)/$(libcpuinfo_so) \
+			  -install_name $(libdir)/$(libcpuinfo_so_SONAME) \
 			  -compatibility_version $(libcpuinfo_so_major).$(libcpuinfo_so_minor) \
 			  -current_version $(libcpuinfo_so_VERSION)
 endif
@@ -112,7 +118,7 @@ ifeq ($(build_shared),yes)
 endif
 
 $(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(cpuinfo_DEPS)
-	$(CC) -o $@ $(cpuinfo_OBJECTS) $(cpuinfo_LDFLAGS) $(LDFLAGS)
+	$(CC_FOR_SHARED) -o $@ $(cpuinfo_OBJECTS) $(cpuinfo_LDFLAGS) $(LDFLAGS)
 
 install: install.dirs install.bins install.libs
 install.dirs:
@@ -122,23 +128,20 @@ ifeq (yes,$(findstring yes,$(build_static) $(build_shared)))
 endif
 
 install.bins: $(cpuinfo_PROGRAM)
-	install -m 755 $(STRIP_OPT) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 $(STRIP_OPT) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
 
 install.libs: install.libs.static install.libs.shared
 ifeq ($(build_static),yes)
 install.libs.static: $(libcpuinfo_a)
-	install -m 644 $< $(DESTDIR)$(libdir)/
+	$(INSTALL) -m 644 $< $(DESTDIR)$(libdir)/
 else
 install.libs.static:
 endif
 ifeq ($(build_shared),yes)
-install.libs.shared: $(libcpuinfo_so_LTLIBRARY)
-	install -m 755 $< $(DESTDIR)$(libdir)/
-ifeq ($(OS),darwin)
-	$(LN) -sf $< $(DESTDIR)$(libdir)/$(libcpuinfo_so)
-else
-	/sbin/ldconfig -l $(DESTDIR)$(libdir)/$<
-endif
+install.libs.shared: $(libcpuinfo_so)
+	$(INSTALL) -m 755 $(libcpuinfo_so_LTLIBRARY) $(DESTDIR)$(libdir)/
+	$(LN) -sf $(libcpuinfo_so_LTLIBRARY) $(DESTDIR)$(libdir)/$(libcpuinfo_so_SONAME)
+	$(LN) -sf $(libcpuinfo_so_SONAME) $(DESTDIR)$(libdir)/$(libcpuinfo_so)
 else
 install.libs.shared:
 endif
@@ -189,8 +192,9 @@ $(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
 	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
 	$(RANLIB) $@
 
-$(libcpuinfo_so): $(libcpuinfo_so_LTLIBRARY)
+$(libcpuinfo_so): $(libcpuinfo_so_SONAME)
 	$(LN) -sf $< $@
-
+$(libcpuinfo_so_SONAME): $(libcpuinfo_so_LTLIBRARY)
+	$(LN) -sf $< $@
 $(libcpuinfo_so_LTLIBRARY): $(libcpuinfo_so_OBJECTS)
 	$(CC) -o $@ $(libcpuinfo_so_OBJECTS) $(libcpuinfo_so_LDFLAGS) 
