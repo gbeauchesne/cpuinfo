@@ -24,7 +24,7 @@ libdir=""
 cc="gcc"
 build_static="no"
 build_shared="no"
-dont_strip="no"
+install_stripped="no"
 host_os=`uname -s | tr '[A-Z]' '[a-z]'`
 host_cpu=`uname -m`
 case "$host_cpu" in
@@ -90,11 +90,11 @@ case "$opt" in
 --disable-shared)
     build_shared="no"
     ;;
+--install-stripped)
+    install_stripped="yes"
+    ;;
 --with-cc=*)
     cc=`echo $opt | cut -d '=' -f 2`
-    ;;
---dont-strip)
-    dont_strip="yes"
     ;;
 esac
 done
@@ -184,7 +184,7 @@ echo ""
 echo "Advanced options (experts only):"
 echo "  --source-path=PATH          path of source code [$source_path]"
 echo "  --with-cc=CC                use C compiler CC [$cc]"
-echo "  --dont-strip                don't strip libraries and binaries [$dont_strip]"
+echo "  --install-stripped          strip libraries and binaries [$install_stripped]"
 echo ""
 echo "NOTE: The object files are built at the place where configure is launched"
 exit 1
@@ -196,6 +196,7 @@ echo "Source path               $source_path"
 echo "C compiler                $cc"
 echo "Build static libraries    $build_static"
 echo "Build shared libraries    $build_shared"
+echo "Install stripped          $install_stripped"
 echo "Host OS                   $host_os"
 echo "Host CPU                  $host_cpu"
 
@@ -261,7 +262,9 @@ echo "prefix=$prefix" >> $config_mak
 echo "bindir=$prefix/bin" >> $config_mak
 echo "libdir=$libdir" >> $config_mak
 
-echo "DONT_STRIP=$dont_strip" >> $config_mak
+if test "$install_stripped" = "yes"; then
+    echo "INSTALL_STRIPPED=-s" >> $config_mak
+fi
 echo "build_static=$build_static" >> $config_mak
 echo "build_shared=$build_shared" >> $config_mak
 
