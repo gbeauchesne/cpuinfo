@@ -48,10 +48,10 @@ typedef struct cpuinfo_list {
 } *cpuinfo_list_t;
 
 // Clear list
-extern int cpuinfo_list_clear(cpuinfo_list_t *lp);
+extern int cpuinfo_list_clear(cpuinfo_list_t *lp) attribute_hidden;
 
 // Insert new element into the list
-extern int cpuinfo_list_insert(cpuinfo_list_t *lp, const void *ptr, int size);
+extern int cpuinfo_list_insert(cpuinfo_list_t *lp, const void *ptr, int size) attribute_hidden;
 #define cpuinfo_list_insert(LIST, PTR) (cpuinfo_list_insert)(LIST, PTR, sizeof(*(PTR)))
 
 #define cpuinfo_caches_list_insert(PTR) do {		\
@@ -66,10 +66,10 @@ extern int cpuinfo_list_insert(cpuinfo_list_t *lp, const void *ptr, int size);
 /* ========================================================================= */
 
 // Get processor socket ID
-extern int cpuinfo_dmi_get_socket(struct cpuinfo *cip);
+extern int cpuinfo_dmi_get_socket(struct cpuinfo *cip) attribute_hidden;
 
 // Fill in cache descriptors
-extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip);
+extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip) attribute_hidden;
 
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
@@ -79,47 +79,47 @@ extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip);
 typedef void (*cpuinfo_feature_test_function_t)(void);
 
 // Returns true if function succeeds, false if SIGILL was caught
-extern int cpuinfo_feature_test_function(cpuinfo_feature_test_function_t func);
+extern int cpuinfo_feature_test_function(cpuinfo_feature_test_function_t func) attribute_hidden;
 
 // Accessors for cpuinfo_features[] table
-extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature);
-extern void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature);
+extern int cpuinfo_feature_get_bit(struct cpuinfo *cip, int feature) attribute_hidden;
+extern void cpuinfo_feature_set_bit(struct cpuinfo *cip, int feature) attribute_hidden;
 
 /* ========================================================================= */
 /* == Arch-specific Interface                                             == */
 /* ========================================================================= */
 
 // Returns a new cpuinfo descriptor
-extern int cpuinfo_arch_new(struct cpuinfo *cip);
+extern int cpuinfo_arch_new(struct cpuinfo *cip) attribute_hidden;
 
 // Release the cpuinfo descriptor and all allocated data
-extern void cpuinfo_arch_destroy(struct cpuinfo *cip);
+extern void cpuinfo_arch_destroy(struct cpuinfo *cip) attribute_hidden;
 
 // Get processor vendor ID 
-extern int cpuinfo_arch_get_vendor(struct cpuinfo *cip);
+extern int cpuinfo_arch_get_vendor(struct cpuinfo *cip) attribute_hidden;
 
 // Get processor name
-extern char *cpuinfo_arch_get_model(struct cpuinfo *cip);
+extern char *cpuinfo_arch_get_model(struct cpuinfo *cip) attribute_hidden;
 
 // Get processor frequency in MHz
-extern int cpuinfo_arch_get_frequency(struct cpuinfo *cip);
+extern int cpuinfo_arch_get_frequency(struct cpuinfo *cip) attribute_hidden;
 
 // Get processor socket ID
-extern int cpuinfo_arch_get_socket(struct cpuinfo *cip);
+extern int cpuinfo_arch_get_socket(struct cpuinfo *cip) attribute_hidden;
 
 // Get number of cores per CPU package
-extern int cpuinfo_arch_get_cores(struct cpuinfo *cip);
+extern int cpuinfo_arch_get_cores(struct cpuinfo *cip) attribute_hidden;
 
 // Get number of threads per CPU core
-extern int cpuinfo_arch_get_threads(struct cpuinfo *cip);
+extern int cpuinfo_arch_get_threads(struct cpuinfo *cip) attribute_hidden;
 
 // Get cache information (returns the number of caches detected)
-extern cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip);
+extern cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip) attribute_hidden;
 
 // Returns features table
-extern uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature);
+extern uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature) attribute_hidden;
 
 // Returns 0 if CPU supports the specified feature
-extern int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature);
+extern int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature) attribute_hidden;
 
 #endif /* CPUINFO_PRIVATE_H */

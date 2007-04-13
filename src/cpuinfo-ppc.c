@@ -18,9 +18,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include "sysdeps.h"
 #include <sys/time.h>
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"

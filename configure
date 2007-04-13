@@ -259,11 +259,9 @@ else
 fi
 
 if test "$has_visibility_attribute" = "yes"; then
-    echo "#define attribute_hidden __attribute__((visibility(\"hidden\")))" >> $config_h
-    echo "#define attribute_protected __attribute__((visibility(\"protected\")))" >> $config_h
+    echo "#define HAVE_VISIBILITY_ATTRIBUTE 1" >> $config_h
 else
-    echo "#define attribute_hidden" >> $config_h
-    echo "#define attribute_protected" >> $config_h
+    echo "#undef HAVE_VISIBILITY_ATTRIBUTE" >> $config_h
 fi
 
 config_mak="config.mak"
