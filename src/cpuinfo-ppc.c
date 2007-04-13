@@ -426,7 +426,7 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
   FILE *proc_file = fopen("/proc/cpuinfo", "r");
   if (proc_file) {
 	char line[256];
-	while(fgets(line, 255, proc_file)) {
+	while(fgets(line, sizeof(line), proc_file)) {
 	  // Read line
 	  int len = strlen(line);
 	  if (len == 0)

@@ -435,7 +435,35 @@ static inline uint64_t get_ticks_usec(void)
   return ((uint64_t)tv.tv_sec * 1000000) + tv.tv_usec;
 }
 
-// Get processor frequency in MHz (x86info)
+// Try to get CPU frequency from other OS-dependent means
+static int os_get_frequency(void)
+{
+  int freq = 0;
+
+#if defined __linux__
+  FILE *proc_file = fopen("/proc/cpuinfo", "r");
+  if (proc_file) {
+	char line[256];
+	while(fgets(line, sizeof(line), proc_file)) {
+	  // Read line
+	  int len = strlen(line);
+	  if (len == 0)
+		continue;
+	  line[len-1] = 0;
+
+	  // Parse line
+	  float f;
+	  if (sscanf(line, "cpu MHz : %f", &f) == 1)
+		freq = f;
+	}
+	fclose(proc_file);
+  }
+#endif
+
+  return freq;
+}
+
+// Get processor frequency in MHz
 int cpuinfo_arch_get_frequency(struct cpuinfo *cip)
 {
   uint64_t start, stop;
@@ -445,7 +473,7 @@ int cpuinfo_arch_get_frequency(struct cpuinfo *cip)
   uint32_t edx;
   cpuid(1, NULL, NULL, NULL, &edx);
   if ((edx & (1 << 4)) == 0)
-	return 0;
+	return os_get_frequency();
 
   start = get_ticks_usec();
   ticks_start = get_ticks();
