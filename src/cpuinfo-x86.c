@@ -124,7 +124,7 @@ int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
 // Get processor vendor ID 
 int cpuinfo_arch_get_vendor(struct cpuinfo *cip)
 {
-  int vendor;
+  int vendor = -1;
 
   char v[13] = { 0, };
   cpuid(0, NULL, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
@@ -133,9 +133,31 @@ int cpuinfo_arch_get_vendor(struct cpuinfo *cip)
 	vendor = CPUINFO_VENDOR_INTEL;
   else if (!strcmp(v, "AuthenticAMD"))
 	vendor = CPUINFO_VENDOR_AMD;
-  else if (!strcmp(v, "GenuineTMx86") || !strcmp(v, "TransmetaCPU"))
+  else if (!strcmp(v, "GenuineTMx86"))
 	vendor = CPUINFO_VENDOR_TRANSMETA;
-  else
+  else if (!strcmp(v, "UMC UMC UMC "))
+	vendor = CPUINFO_VENDOR_UMC;
+  else if (!strcmp(v, "CyrixInstead"))
+	vendor = CPUINFO_VENDOR_CYRIX;
+  else if (!strcmp(v, "NexGenDriven"))
+	vendor = CPUINFO_VENDOR_NEXTGEN;
+  else if (!strcmp(v, "CentaurHauls"))
+	vendor = CPUINFO_VENDOR_CENTAUR;
+  else if (!strcmp(v, "SiS SiS SiS "))
+	vendor = CPUINFO_VENDOR_SIS;
+  else if (!strcmp(v, "Geode by NSC"))
+	vendor = CPUINFO_VENDOR_NSC;
+  else {
+	uint32_t cpuid_level;
+	cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
+	if ((cpuid_level & 0xffff0000) == 0x80000000) {
+	  cpuid(0x80000000, NULL, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
+	  if (!strcmp(v, "TransmetaCPU"))
+		vendor = CPUINFO_VENDOR_TRANSMETA;
+	}
+  }
+
+  if (vendor < 0)
 	vendor = CPUINFO_VENDOR_UNKNOWN;
 
   return vendor;

@@ -278,10 +278,17 @@ const char *cpuinfo_string_of_vendor(int vendor)
   const char *str = "<unknown>";
   switch (vendor) {
   case CPUINFO_VENDOR_AMD:			str = "AMD";		break;
+  case CPUINFO_VENDOR_CENTAUR:		str = "Centaur";	break;
+  case CPUINFO_VENDOR_CYRIX:		str = "Cyrix";		break;
   case CPUINFO_VENDOR_IBM:			str = "IBM";		break;
   case CPUINFO_VENDOR_INTEL:		str = "Intel";		break;
   case CPUINFO_VENDOR_MOTOROLA:		str = "Motorola";	break;
+  case CPUINFO_VENDOR_NEXTGEN:		str = "NextGen";	break;
+  case CPUINFO_VENDOR_NSC:			str = "National Semiconductor";		break;
+  case CPUINFO_VENDOR_RISE:		    str = "Rise Technology";			break;
+  case CPUINFO_VENDOR_SIS:		    str = "SiS";		break;
   case CPUINFO_VENDOR_TRANSMETA:	str = "Transmeta";	break;
+  case CPUINFO_VENDOR_UMC:		    str = "UMC";		break;
   }
   return str;
 }
