@@ -18,73 +18,77 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdio.h>
+#include "sysdeps.h"
 #include "cpuinfo.h"
 
 #define DEBUG 0
 #include "debug.h"
 
-int main(void)
+static void print_usage(const char *progname)
+{
+  printf("cpuinfo, get processor information.  Version %s\n", CPUINFO_VERSION);
+  printf("\n");
+  printf("  usage: %s [<options>]\n", progname);
+  printf("\n");
+  printf("   -h --help               print this message\n");
+  printf("   -d --debug [FILE]       dump debug information into FILE\n");
+}
+
+static void print_cpuinfo(struct cpuinfo *cip, FILE *out)
 {
   int i, j;
 
-  struct cpuinfo *cip = cpuinfo_new();
-  if (cip == NULL) {
-	fprintf(stderr, "ERROR: could not allocate cpuinfo descriptor\n");
-	return 1;
-  }
-
-  printf("Processor Information\n");
+  fprintf(out, "Processor Information\n");
 
   int vendor = cpuinfo_get_vendor(cip);
-  printf("  Model: %s %s", cpuinfo_string_of_vendor(vendor), cpuinfo_get_model(cip));
+  fprintf(out, "  Model: %s %s", cpuinfo_string_of_vendor(vendor), cpuinfo_get_model(cip));
   int freq = cpuinfo_get_frequency(cip);
   if (freq > 0) {
-	printf(", ");
+	fprintf(out, ", ");
 	if (freq > 1000)
-	  printf("%.2f GHz", (double)freq / 1000.0);
+	  fprintf(out, "%.2f GHz", (double)freq / 1000.0);
 	else
-	  printf("%d MHz", freq);
+	  fprintf(out, "%d MHz", freq);
   }
-  printf("\n");
+  fprintf(out, "\n");
 
   int socket = cpuinfo_get_socket(cip);
-  printf("  Package:");
+  fprintf(out, "  Package:");
   if (socket != CPUINFO_SOCKET_UNKNOWN)
-	printf(" %s,", cpuinfo_string_of_socket(socket));
+	fprintf(out, " %s,", cpuinfo_string_of_socket(socket));
   int n_cores = cpuinfo_get_cores(cip);
-  printf(" %d Core%s", n_cores, n_cores > 1 ? "s" : "");
+  fprintf(out, " %d Core%s", n_cores, n_cores > 1 ? "s" : "");
   int n_threads = cpuinfo_get_threads(cip);
   if (n_threads > 1)
-	printf(", %d Threads per Core", n_threads);
-  printf("\n");
+	fprintf(out, ", %d Threads per Core", n_threads);
+  fprintf(out, "\n");
 
-  printf("\n");
-  printf("Processor Caches\n");
+  fprintf(out, "\n");
+  fprintf(out, "Processor Caches\n");
 
   const cpuinfo_cache_t *ccp = cpuinfo_get_caches(cip);
   if (ccp) {
 	for (i = 0; i < ccp->count; i++) {
 	  const cpuinfo_cache_descriptor_t *ccdp = &ccp->descriptors[i];
 	  if (ccdp->level == 0 && ccdp->type == CPUINFO_CACHE_TYPE_TRACE)
-		printf("  Trace cache, %dK uOps", ccdp->size);
+		fprintf(out, "  Trace cache, %dK uOps", ccdp->size);
 	  else {
-		printf("  L%d %s cache, ", ccdp->level, cpuinfo_string_of_cache_type(ccdp->type));
+		fprintf(out, "  L%d %s cache, ", ccdp->level, cpuinfo_string_of_cache_type(ccdp->type));
 		if (ccdp->size >= 1024) {
 		  if ((ccdp->size % 1024) == 0)
-			printf("%d MB", ccdp->size / 1024);
+			fprintf(out, "%d MB", ccdp->size / 1024);
 		  else
-			printf("%.2f MB", (double)ccdp->size / 1024.0);
+			fprintf(out, "%.2f MB", (double)ccdp->size / 1024.0);
 		}
 		else
-		  printf("%d KB", ccdp->size);
+		  fprintf(out, "%d KB", ccdp->size);
 	  }
-	  printf("\n");
+	  fprintf(out, "\n");
 	}
   }
 
-  printf("\n");
-  printf("Processor Features\n");
+  fprintf(out, "\n");
+  fprintf(out, "Processor Features\n");
 
   static const struct {
 	int base;
@@ -103,10 +107,56 @@ int main(void)
 	  if (cpuinfo_has_feature(cip, feature)) {
 		const char *name = cpuinfo_string_of_feature(feature);
 		const char *detail = cpuinfo_string_of_feature_detail(feature);
-		printf("  %-10s %s\n", name, detail);
+		fprintf(out, "  %-10s %s\n", name, detail);
 	  }
 	}
   }
+}
+
+int main(int argc, char *argv[])
+{
+  int i;
+  FILE *out;
+  const char *out_filename = NULL;
+
+  for (i = 1; i < argc; i++) {
+	const char *arg = argv[i];
+	if (strcmp(arg, "-d") == 0 || strcmp(arg, "--debug") == 0) {
+	  if (++i < argc)
+		out_filename = argv[i];
+	  else
+		out_filename = "-"; /* stdout */
+	}
+	else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
+	  print_usage(argv[0]);
+	  return 0;
+	}
+  }
+
+  struct cpuinfo *cip = cpuinfo_new();
+  if (cip == NULL) {
+	fprintf(stderr, "ERROR: could not allocate cpuinfo descriptor\n");
+	return 1;
+  }
+
+  if (out_filename == NULL || strcmp(out_filename, "-") == 0)
+	out = stdout;
+  else {
+	if ((out = fopen(out_filename, "w")) == NULL) {
+	  fprintf(stderr, "ERROR: could not open debug file '%s'\n", out_filename);
+	  return 2;
+	}
+  }
+
+  print_cpuinfo(cip, out);
+
+  if (out_filename) { /* debug mode */
+	fprintf(out, "\n### DEBUGGING INFORMATION ###\n\n");
+	cpuinfo_dump(cip, out);
+  }
+
+  if (out != stdout)
+	fclose(out);
 
   cpuinfo_destroy(cip);
 

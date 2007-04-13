@@ -30,6 +30,9 @@ extern struct cpuinfo *cpuinfo_new(void);
 // Release the cpuinfo descriptor and all allocated data
 extern void cpuinfo_destroy(struct cpuinfo *cip);
 
+// Dump all useful information for debugging
+extern int cpuinfo_dump(struct cpuinfo *cip, FILE *out);
+
 /* ========================================================================= */
 /* == General Processor Information                                       == */
 /* ========================================================================= */

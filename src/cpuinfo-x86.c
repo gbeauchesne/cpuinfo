@@ -80,6 +80,47 @@ void cpuinfo_arch_destroy(struct cpuinfo *cip)
 	free(cip->opaque);
 }
 
+// Dump all useful information for debugging
+int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
+{
+  uint32_t i, n;
+  uint32_t cpuid_level;
+  uint32_t eax, ebx, ecx, edx;
+
+  char v[13] = { 0, };
+  cpuid(0, &cpuid_level, (uint32_t *)&v[0], (uint32_t *)&v[8], (uint32_t *)&v[4]);
+  fprintf(out, "Vendor ID string: '%s'\n", v);
+  fprintf(out, "\n");
+
+  fprintf(out, "Maximum supported standard level: %08x\n", cpuid_level);
+  for (i = 0; i <= cpuid_level; i++) {
+	cpuid(i, &eax, &ebx, &ecx, &edx);
+	fprintf(out, "%08x: eax %08x, ebx %08x, ecx %08x, edx %08x\n", i, eax, ebx, ecx, edx);
+	if (i == 4) { // special case for cpuid(4)
+	  for (n = 0; /* nothing */; n++) {
+		ecx = n;
+		cpuid(4, &eax, &ebx, &ecx, &edx);
+		if ((eax & 0x1f) == 0)
+		  break;
+		fprintf(out, "--- %04d: eax %08x, ebx %08x, ecx %08x, edx %08x\n", n, eax, ebx, ecx, edx);
+	  }
+	}
+  }
+  fprintf(out, "\n");
+
+  cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
+  if ((cpuid_level & 0xffff0000) == 0x80000000) {
+	fprintf(out, "Maximum supported extended level: %08x\n", cpuid_level);
+	for (i = 0x80000000; i <= cpuid_level; i++) {
+	  cpuid(i, &eax, &ebx, &ecx, &edx);
+	  fprintf(out, "%08x: eax %08x, ebx %08x, ecx %08x, edx %08x\n", i, eax, ebx, ecx, edx);
+	}
+  }
+  fprintf(out, "\n");
+
+  return 0;
+}
+
 // Get processor vendor ID 
 int cpuinfo_arch_get_vendor(struct cpuinfo *cip)
 {
