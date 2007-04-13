@@ -110,7 +110,7 @@ ifeq ($(build_static),yes)
 	rm -f $(libcpuinfo_a) $(libcpuinfo_a_OBJECTS)
 endif
 ifeq ($(build_shared),yes)
-	rm -f $(libcpuinfo_so) $(libcpuinfo_so_LTLIBRARY) $(libcpuinfo_so_OBJECTS)
+	rm -f $(libcpuinfo_so) $(libcpuinfo_so_SONAME) $(libcpuinfo_so_LTLIBRARY) $(libcpuinfo_so_OBJECTS)
 endif
 
 $(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(cpuinfo_DEPS)
