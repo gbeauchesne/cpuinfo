@@ -122,11 +122,14 @@ install.dirs:
 ifeq (yes,$(findstring yes,$(build_static) $(build_shared)))
 	mkdir -p $(DESTDIR)$(libdir)
 endif
+ifeq ($(install_sdk),yes)
+	mkdir -p $(DESTDIR)$(includedir)
+endif
 
 install.bins: $(cpuinfo_PROGRAM)
 	$(INSTALL) -m 755 $(INSTALL_STRIPPED) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
 
-install.libs: install.libs.static install.libs.shared
+install.libs: install.libs.static install.libs.shared install.headers
 ifeq ($(build_static),yes)
 install.libs.static: $(libcpuinfo_a)
 	$(INSTALL) -m 644 $(INSTALL_STRIPPED) $< $(DESTDIR)$(libdir)/
@@ -140,6 +143,12 @@ install.libs.shared: $(libcpuinfo_so)
 	$(LN) -sf $(libcpuinfo_so_SONAME) $(DESTDIR)$(libdir)/$(libcpuinfo_so)
 else
 install.libs.shared:
+endif
+ifeq ($(install_sdk),yes)
+install.headers:
+	$(INSTALL) -m 644 $(SRC_PATH)/src/cpuinfo.h $(DESTDIR)$(includedir)/
+else
+install.headers:
 endif
 
 $(archivedir)::
