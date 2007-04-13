@@ -1,7 +1,7 @@
 /*
  *  cpuinfo-x86.c - Processor identification code, x86 specific
  *
- *  cpuinfo (C) 2006 Gwenole Beauchesne
+ *  cpuinfo (C) 2006-2007 Gwenole Beauchesne
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
