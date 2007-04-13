@@ -74,11 +74,16 @@ libcpuinfo_so_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.os)
 cpuinfo_PROGRAM	= cpuinfo
 cpuinfo_SOURCES	= cpuinfo.c
 cpuinfo_OBJECTS	= $(cpuinfo_SOURCES:%.c=%.o)
+ifeq ($(build_shared),yes)
+cpuinfo_DEPS	= $(libcpuinfo_so)
+cpuinfo_LDFLAGS	= -L. -lcpuinfo
+else
 ifeq ($(build_static),yes)
 cpuinfo_DEPS	= $(libcpuinfo_a)
 cpuinfo_LDFLAGS	= $(libcpuinfo_a)
 else
 cpuinfo_OBJECTS += $(libcpuinfo_a_OBJECTS)
+endif
 endif
 
 TARGETS		= $(cpuinfo_PROGRAM)
@@ -99,18 +104,44 @@ all: $(TARGETS)
 
 clean:
 	rm -f $(TARGETS) *.o *.os
+ifeq ($(build_static),yes)
 	rm -f $(libcpuinfo_a) $(libcpuinfo_a_OBJECTS)
+endif
+ifeq ($(build_shared),yes)
 	rm -f $(libcpuinfo_so) $(libcpuinfo_so_LTLIBRARY) $(libcpuinfo_so_OBJECTS)
+endif
 
 $(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(cpuinfo_DEPS)
 	$(CC) -o $@ $(cpuinfo_OBJECTS) $(cpuinfo_LDFLAGS) $(LDFLAGS)
 
-install: install.dirs install.bins
+install: install.dirs install.bins install.libs
 install.dirs:
 	mkdir -p $(DESTDIR)$(bindir)
+ifeq (yes,$(findstring yes,$(build_static) $(build_shared)))
+	mkdir -p $(DESTDIR)$(libdir)
+endif
 
 install.bins: $(cpuinfo_PROGRAM)
 	install -m 755 $(STRIP_OPT) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
+
+install.libs: install.libs.static install.libs.shared
+ifeq ($(build_static),yes)
+install.libs.static: $(libcpuinfo_a)
+	install -m 644 $< $(DESTDIR)$(libdir)/
+else
+install.libs.static:
+endif
+ifeq ($(build_shared),yes)
+install.libs.shared: $(libcpuinfo_so_LTLIBRARY)
+	install -m 755 $< $(DESTDIR)$(libdir)/
+ifeq ($(OS),darwin)
+	$(LN) -sf $< $(DESTDIR)$(libdir)/$(libcpuinfo_so)
+else
+	/sbin/ldconfig -l $(DESTDIR)$(libdir)/$<
+endif
+else
+install.libs.shared:
+endif
 
 $(archivedir)::
 	[ -d $(archivedir) ] || mkdir $(archivedir) > /dev/null 2>&1
