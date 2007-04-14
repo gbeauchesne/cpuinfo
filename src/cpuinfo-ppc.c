@@ -54,10 +54,11 @@ typedef struct {
   int type;
 } of_property_t;
 
-#define N_OF_PROPERTIES 9
+#define N_OF_PROPERTIES 10
 
 typedef struct {
   int n_cpus;
+  uint32_t cpu_version;
   uint32_t clock_frequency;
   uint32_t timebase_frequency;
   uint32_t d_cache_size;
@@ -73,6 +74,23 @@ typedef struct {
 
 static int of_get_property(of_property_t *pnode, const char *path)
 {
+#if defined __APPLE__ && defined __MACH__
+  switch (pnode->type) {
+  case OF_TYPE_INT_32:
+	*((uint32_t *)(pnode->var)) = strtoul(path, NULL, 16);
+	break;
+  case OF_TYPE_INT_64:
+	*((uint64_t *)(pnode->var)) = strtoull(path, NULL, 16);
+	break;
+  case OF_TYPE_STRING: {
+	char *str = (char *)pnode->var;
+	if (sscanf(path, "\"%[^\"]", str) != 1)
+	  strcpy(str, "<unknown>");
+	break;
+  }
+  }
+  return 0;
+#elif defined __linux__
   FILE *fp = fopen(path, "r");
   if (fp) {
 	switch (pnode->type) {
@@ -100,6 +118,7 @@ static int of_get_property(of_property_t *pnode, const char *path)
 	fclose(fp);
 	return 0;
   }
+#endif
   return -1;
 }
 
@@ -123,14 +142,52 @@ static int of_get_properties(of_info_t *ofip)
   OF_PROP_INIT(6, "l2cr",					l2cr,				INT_32);
   OF_PROP_INIT(7, "l3cr",					l3cr,				INT_32);
   OF_PROP_INIT(8, "name",					name,				STRING);
+  OF_PROP_INIT(9, "cpu-version",			cpu_version,		INT_32);
 #undef OF_PROP_INIT
 
   int i;
   int n_cpus = 0;
+#if defined __APPLE__ && defined __MACH__
+  FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
+  if (proc_file == NULL)
+	return NULL;
+  char line[256];
+  int powerpc_node = 0;
+  while (fgets(line, sizeof(line), proc_file)) {
+	// Read line
+	int len = strlen(line);
+	if (len == 0)
+	  continue;
+	line[len - 1] = 0;
+
+	// Parse line
+	if (strstr(line, "o PowerPC,")) {
+	  powerpc_node = 1;
+	  ++n_cpus;
+	}
+	else if (powerpc_node && n_cpus == 1) {
+	  char key[256], value[256], dummy[256];
+	  if (sscanf(line, "%[ |]\"%[^\"]\" = <%[^>]>", dummy, key, value) == 3) {
+		for (i = 0; ofip->of_properties[i].node != NULL; i++) {
+		  of_property_t *pnode = &ofip->of_properties[i];
+		  if (strcmp(pnode->node, key) == 0) {
+			if (of_get_property(pnode, value) < 0)
+			  D(bug("failed to read property %s, value %s\n", key, value));
+		  }
+		}
+	  }
+	  else if (strchr(line, '}'))
+		powerpc_node = 0;
+	}
+  }
+  fclose(proc_file);
+#elif defined __linux__
   char path[PATH_MAX];
   struct dirent *de;
   static const char oftree_cpus[] = "/proc/device-tree/cpus";
   DIR *d = opendir(oftree_cpus);
+  if (d == NULL)
+	return -1;
   while ((de = readdir(d)) != NULL) {
 	if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
 	  continue;
@@ -153,6 +210,9 @@ static int of_get_properties(of_info_t *ofip)
 	  }
 	}
   }
+#else
+  return -1;
+#endif
   ofip->n_cpus = n_cpus;
   return 0;
 }
@@ -534,41 +594,11 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 	acip->l2cr = of_info.l2cr;
 	acip->l3cr = of_info.l3cr;
 	acip->frequency = of_info.clock_frequency / (1000 * 1000);
+	if (acip->pvr == 0 && of_info.cpu_version != 0)
+	  acip->pvr = of_info.cpu_version;
   }
 
 #if defined __APPLE__ && defined __MACH__
-  FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
-  if (proc_file) {
-	char line[256];
-	int powerpc_node = 0;
-	while (fgets(line, sizeof(line) - 1, proc_file)) {
-	  // Read line
-	  int len = strlen(line);
-	  if (len == 0)
-		continue;
-	  line[len - 1] = 0;
-
-	  // Parse line
-	  if (strstr(line, "o PowerPC,"))
-		powerpc_node = 1;
-	  else if (powerpc_node) {
-		uint32_t value;
-		char head[256];
-		if (sscanf(line, "%[ |]\"cpu-version\" = <%x>", head, &value) == 2) {
-		  if (acip->pvr == 0)
-			acip->pvr = value;
-		}
-		else if (sscanf(line, "%[ |]\"clock-frequency\" = <%x>", head, &value) == 2) {
-		  if (acip->frequency == 0)
-			acip->frequency = value / (1000 * 1000);
-		}
-		else if (strchr(line, '}'))
-		  powerpc_node = 0;
-	  }
-	}
-	fclose(proc_file);
-  }
-
   if (acip->pvr == 0) {
 	const NXArchInfo *a = NXGetLocalArchInfo();
 	if (a->cputype == CPU_TYPE_POWERPC) {
