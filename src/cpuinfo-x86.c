@@ -28,8 +28,6 @@
 #define DEBUG 1
 #include "debug.h"
 
-#if defined __i386__ || defined __x86_64__
-
 static void cpuid(uint32_t op, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
 {
   uint32_t a = eax ? *eax : 0;
@@ -920,5 +918,3 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 
   return cpuinfo_feature_get_bit(cip, feature);
 }
-
-#endif

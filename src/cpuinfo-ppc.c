@@ -36,8 +36,6 @@
 #define DEBUG 1
 #include "debug.h"
 
-#if defined __powerpc__ || defined __ppc__
-
 // Extract information from Open Firmware
 typedef char of_string_t[256];
 
@@ -907,5 +905,3 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 
   return cpuinfo_feature_get_bit(cip, feature);
 }
-
-#endif
