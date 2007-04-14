@@ -38,9 +38,130 @@
 
 #if defined __powerpc__ || defined __ppc__
 
+// Extract information from Open Firmware
+typedef char of_string_t[256];
+
+enum {
+  OF_TYPE_INVALID = -1,
+  OF_TYPE_INT_32,
+  OF_TYPE_INT_64,
+  OF_TYPE_STRING,
+};
+
+typedef struct {
+  const char *node;
+  void *var;
+  int type;
+} of_property_t;
+
+#define N_OF_PROPERTIES 9
+
+typedef struct {
+  int n_cpus;
+  uint32_t clock_frequency;
+  uint32_t timebase_frequency;
+  uint32_t d_cache_size;
+  uint32_t d_cache_line_size;
+  uint32_t i_cache_size;
+  uint32_t i_cache_line_size;
+  uint32_t l2cr;
+  uint32_t l3cr;
+  of_string_t name;
+  // private data (for decoding & printing)
+  of_property_t of_properties[N_OF_PROPERTIES + 1];
+} of_info_t;
+
+static int of_get_property(of_property_t *pnode, const char *path)
+{
+  FILE *fp = fopen(path, "r");
+  if (fp) {
+	switch (pnode->type) {
+	case OF_TYPE_INT_32: {
+	  uint32_t value;
+	  if (fread(&value, sizeof(value), 1, fp) != 1)
+		value = 0;
+	  *((uint32_t *)(pnode->var)) = value;
+	  break;
+	}
+	case OF_TYPE_INT_64: {
+	  uint64_t value;
+	  if (fread(&value, sizeof(value), 1, fp) != 1)
+		value = 0;
+	  *((uint64_t *)(pnode->var)) = value;
+	  break;
+	}
+	case OF_TYPE_STRING: {
+	  char *str = (char *)pnode->var;
+	  if (fgets(str, sizeof(of_string_t), fp) == NULL)
+		strcpy(str, "<unknown>");
+	  break;
+	}
+	}
+	fclose(fp);
+	return 0;
+  }
+  return -1;
+}
+
+static int of_get_properties(of_info_t *ofip)
+{
+  if (ofip == NULL)
+	return -1;
+
+  memset(ofip, 0, sizeof(*ofip));
+#define OF_PROP_INIT(ID, NAME, VAR, TYPE) do {		\
+	ofip->of_properties[ID].node = NAME;			\
+	ofip->of_properties[ID].var = &ofip->VAR;		\
+	ofip->of_properties[ID].type = OF_TYPE_##TYPE;	\
+  } while (0)
+  OF_PROP_INIT(0, "clock-frequency",		clock_frequency,	INT_32);
+  OF_PROP_INIT(1, "timebase-frequency",		timebase_frequency,	INT_32);
+  OF_PROP_INIT(2, "d-cache-size",			d_cache_size,		INT_32);
+  OF_PROP_INIT(3, "d-cache-line-size",		d_cache_line_size,	INT_32);
+  OF_PROP_INIT(4, "i-cache-size",			i_cache_size,		INT_32);
+  OF_PROP_INIT(5, "i-cache-line-size",		i_cache_line_size,	INT_32);
+  OF_PROP_INIT(6, "l2cr",					l2cr,				INT_32);
+  OF_PROP_INIT(7, "l3cr",					l3cr,				INT_32);
+  OF_PROP_INIT(8, "name",					name,				STRING);
+#undef OF_PROP_INIT
+
+  int i;
+  int n_cpus = 0;
+  char path[PATH_MAX];
+  struct dirent *de;
+  static const char oftree_cpus[] = "/proc/device-tree/cpus";
+  DIR *d = opendir(oftree_cpus);
+  while ((de = readdir(d)) != NULL) {
+	if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+	  continue;
+	struct stat st;
+	int ret = snprintf(path, sizeof(path), "%s/%s", oftree_cpus, de->d_name);
+	if (ret < 0 || ret >= sizeof(path))
+	  continue;
+	stat(path, &st);
+	if (!S_ISDIR(st.st_mode))
+	  continue;
+	++n_cpus;
+	if (n_cpus == 1) {
+	  for (i = 0; ofip->of_properties[i].node != NULL; i++) {
+		of_property_t *pnode = &ofip->of_properties[i];
+		int ret = snprintf(path, sizeof(path), "%s/%s/%s", oftree_cpus, de->d_name, pnode->node);
+		if (ret < 0 || ret >= sizeof(path))
+		  continue;
+		if (of_get_property(pnode, path) < 0)
+		  D(bug("failed to read property %s\n", path));
+	  }
+	}
+  }
+  ofip->n_cpus = n_cpus;
+  return 0;
+}
+
 // Arch-dependent data
 struct ppc_cpuinfo {
   uint32_t pvr;
+  uint32_t l2cr;
+  uint32_t l3cr;
   uint32_t frequency;
   uint32_t features[CPUINFO_FEATURES_SZ_(PPC)];
 };
@@ -58,8 +179,8 @@ DEFINE_CACHE_DESCRIPTOR(L1D_8KB,	DATA,		1,	    8);
 DEFINE_CACHE_DESCRIPTOR(L1D_16KB,	DATA,		1,	   16);
 DEFINE_CACHE_DESCRIPTOR(L1D_32KB,	DATA,		1,	   32);
 DEFINE_CACHE_DESCRIPTOR(L1D_64KB,	DATA,		1,	   64);
-DEFINE_CACHE_DESCRIPTOR(L1U_16KB,	UNIFIED,	1,	   16);
-DEFINE_CACHE_DESCRIPTOR(L1U_32KB,	UNIFIED,	1,	   32);
+DEFINE_CACHE_DESCRIPTOR(L1_16KB,	UNIFIED,	1,	   16);
+DEFINE_CACHE_DESCRIPTOR(L1_32KB,	UNIFIED,	1,	   32);
 DEFINE_CACHE_DESCRIPTOR(L2_256KB,	UNIFIED,	2,	  256);
 DEFINE_CACHE_DESCRIPTOR(L2_512KB,	UNIFIED,	2,	  512);
 DEFINE_CACHE_DESCRIPTOR(L2_1440KB,	UNIFIED,	2,	 1440);
@@ -91,7 +212,7 @@ static const ppc_spec_t ppc_specs[] = {
 	0xffff0000, 0x00010000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 601",
 	1, 1,
-	{ &L1U_32KB }
+	{ &L1_32KB }
   },
   { /* PowerPC 603 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC603.pdf> */
@@ -206,42 +327,42 @@ static const ppc_spec_t ppc_specs[] = {
 	0xffff0000, 0x00080000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 750",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
+	{ &L1I_32KB, &L1D_32KB }
   },
   { /* PowerPC 7400 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7400EC.pdf> */
 	0xffff0000, 0x000c0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7400",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
+	{ &L1I_32KB, &L1D_32KB }
   },
   { /* PowerPC 7410 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7410EC.pdf> */
 	0xffff0000, 0x800c0000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7410",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB } /* XXX: external L2 cache, check L2CR? */
+	{ &L1I_32KB, &L1D_32KB }
   },
   { /* PowerPC 7450 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7450EC.pdf> */
 	0xffff0000, 0x80000000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7450",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB, &L2_256KB } /* XXX: external L3 cache, check L3CR? */
+	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
   { /* PowerPC 7455 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7455EC.pdf> */
 	0xffff0000, 0x80010000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7455",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB, &L2_256KB } /* XXX: external L3 cache, check L3CR? */
+	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
   { /* PowerPC 7457 */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7457EC.pdf> */
 	0xffff0000, 0x80020000,
 	CPUINFO_VENDOR_MOTOROLA, "PowerPC 7457",
 	1, 1,
-	{ &L1I_32KB, &L1D_32KB, &L2_512KB } /* XXX: external L3 cache, check L3CR? */
+	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
   { /* PowerPC 7447A */
 	/* <http://www.freescale.com/files/32bit/doc/data_sheet/MPC7447AEC.pdf> */
@@ -313,7 +434,7 @@ static const ppc_spec_t ppc_specs[] = {
   {
 	/* POWER5 */
 	0xffff0000, 0x003a0000,
-	CPUINFO_VENDOR_IBM, "POWER4",
+	CPUINFO_VENDOR_IBM, "POWER5",
 	2, 2,
 	{ &L1I_64KB, &L1D_32KB, &L2_1920KB, &L3_36MB }
   },
@@ -354,11 +475,39 @@ enum {
   PVR_POWERPC_603EV		= 0x00070000,
   PVR_POWERPC_604		= 0x00040000,
   PVR_POWERPC_604E		= 0x00090000,
+  PVR_POWERPC_604EV		= 0x000a0000,
   PVR_POWERPC_750		= 0x00080000,
+  PVR_POWERPC_750FX		= 0x70000000,
+  PVR_POWERPC_750FL		= 0x700a0000,
+  PVR_POWERPC_750GX		= 0x70020000,
   PVR_POWERPC_7400		= 0x000c0000,
+  PVR_POWERPC_7410		= 0x800c0000,
   PVR_POWERPC_7450		= 0x80000000,
+  PVR_POWERPC_7455		= 0x80010000,
+  PVR_POWERPC_7457		= 0x80020000,
+  PVR_POWERPC_7447A		= 0x80030000,
+  PVR_POWERPC_7448		= 0x80040000,
   PVR_POWERPC_970		= 0x00390000,
+  PVR_POWERPC_970FX		= 0x003c0000,
+  PVR_POWERPC_970MP		= 0x00440000,
+  PVR_POWER3			= 0x00400000,
+  PVR_POWER3PLUS		= 0x00410000,
+  PVR_POWER4			= 0x00350000,
+  PVR_POWER4PLUS		= 0x00380000,
+  PVR_POWER5			= 0x003a0000,
+  PVR_POWER5PLUS		= 0x003b0000,
+  PVR_POWER6			= 0x003e0000,
+  PVR_CELL				= 0x00700000,
 };
+
+#define PVR_MATCH(PVR, VALUE)	(((PVR) & 0xffff0000) == (VALUE))
+#define PVR_POWERPC(PVR, MODEL)	PVR_MATCH(PVR, PVR_POWERPC_##MODEL)
+#define IS_POWERPC_601(PVR)		(PVR_POWERPC(PVR, 601))
+#define IS_POWERPC_603(PVR)		(PVR_POWERPC(PVR, 603) || PVR_POWERPC(PVR, 603E) || PVR_POWERPC(PVR, 603EV))
+#define IS_POWERPC_604(PVR)		(PVR_POWERPC(PVR, 604) || PVR_POWERPC(PVR, 604E) || PVR_POWERPC(PVR, 604EV))
+#define IS_POWERPC_7400(PVR)	(PVR_POWERPC(PVR, 7400) || PVR_POWERPC(PVR, 7410))
+#define IS_POWERPC_745X(PVR)	(PVR_POWERPC(PVR, 7450) || PVR_POWERPC(PVR, 7455) || PVR_POWERPC(PVR, 7457) || PVR_POWERPC(PVR, 7447A) || PVR_POWERPC(PVR, 7448))
+#define IS_POWERPC_970(PVR)		(PVR_POWERPC(PVR, 970) || PVR_POWERPC(PVR, 970FX) || PVR_POWERPC(PVR, 970MP))
 
 // Returns PVR (Linux only)
 static uint32_t get_pvr(void)
@@ -372,11 +521,20 @@ static uint32_t get_pvr(void)
 static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 {
   acip->pvr = 0;
+  acip->l2cr = 0;
+  acip->l3cr = 0;
   acip->frequency = 0;
   memset(acip->features, 0, sizeof(acip->features));
 
   if (cpuinfo_feature_test_function((cpuinfo_feature_test_function_t)get_pvr))
 	acip->pvr = get_pvr();
+
+  of_info_t of_info;
+  if (of_get_properties(&of_info) == 0) {
+	acip->l2cr = of_info.l2cr;
+	acip->l3cr = of_info.l3cr;
+	acip->frequency = of_info.clock_frequency / (1000 * 1000);
+  }
 
 #if defined __APPLE__ && defined __MACH__
   FILE *proc_file = popen("ioreg -c IOPlatformDevice", "r");
@@ -429,29 +587,32 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 	}
   }
 #elif defined __linux__
-  FILE *proc_file = fopen("/proc/cpuinfo", "r");
-  if (proc_file) {
-	char line[256];
-	while(fgets(line, sizeof(line), proc_file)) {
-	  // Read line
-	  int len = strlen(line);
-	  if (len == 0)
-		continue;
-	  line[len-1] = 0;
+  if (acip->frequency == 0) {
+	FILE *proc_file = fopen("/proc/cpuinfo", "r");
+	if (proc_file) {
+	  char line[256];
+	  while(fgets(line, sizeof(line), proc_file)) {
+		// Read line
+		int len = strlen(line);
+		if (len == 0)
+		  continue;
+		line[len-1] = 0;
 
-	  // Parse line
-	  int i;
-	  float f;
-	  if (sscanf(line, "clock : %fMHz", &f) == 1)
-		acip->frequency = (int)f;
-	  else if (sscanf(line, "clock : %dMHz", &i) == 1)
-		acip->frequency = i;
+		// Parse line
+		int i;
+		float f;
+		if (sscanf(line, "clock : %fMHz", &f) == 1)
+		  acip->frequency = (int)f;
+		else if (sscanf(line, "clock : %dMHz", &i) == 1)
+		  acip->frequency = i;
+	  }
+	  fclose(proc_file);
 	}
-	fclose(proc_file);
   }
-#else
-  return -1;
 #endif
+
+  if (acip->pvr == 0)
+	return -1;
 
   return 0;
 }
@@ -477,135 +638,36 @@ void cpuinfo_arch_destroy(struct cpuinfo *cip)
 	free(cip->opaque);
 }
 
-// Read OF property
-enum {
-  OF_PROP_TYPE_INVALID = -1,
-  OF_PROP_TYPE_INT_AUTO,
-  OF_PROP_TYPE_INT_32,
-  OF_PROP_TYPE_INT_64,
-  OF_PROP_TYPE_STRING,
-};
-
-typedef char oftree_string_t[256];
-
-typedef struct oftree_property {
-  const char *node;
-  void *var;
-  int type;
-} oftree_property_t;
-
-static int get_property(oftree_property_t *pnode, const char *path)
-{
-  int ret = -1;
-  FILE *fp = fopen(path, "r");
-  if (fp) {
-	int type = pnode->type;
-	if (type == OF_PROP_TYPE_INT_AUTO) {
-	  fseek(fp, 0, SEEK_END);
-	  switch (ftell(fp)) {
-	  case 4: type = OF_PROP_TYPE_INT_32; break;
-	  case 8: type = OF_PROP_TYPE_INT_64; break;
-	  default: goto out;
-	  }
-	  fseek(fp, 0, SEEK_SET);
-	}
-	switch (type) {
-	case OF_PROP_TYPE_INT_32: {
-	  uint32_t value;
-	  if (fread(&value, sizeof(value), 1, fp) == 1)
-		*((uint32_t *)(pnode->var)) = value;
-	  break;
-	}
-	case OF_PROP_TYPE_INT_64: {
-	  uint64_t value;
-	  if (fread(&value, sizeof(value), 1, fp) == 1)
-		*((uint64_t *)(pnode->var)) = value;
-	  break;
-	}
-	case OF_PROP_TYPE_STRING: {
-	  char *str = (char *)pnode->var;
-	  if (fgets(str, sizeof(oftree_string_t), fp) == NULL)
-		strcpy(str, "<unknown>");
-	  break;
-	}
-	}
-	pnode->type = type;
-	ret = 0;
-  out:
-	fclose(fp);
-  }
-  return ret;
-}
-
 // Dump all useful information for debugging
 int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
 {
   if (cip == NULL)
 	return -1;
 
-  uint64_t clock_frequency = 0, timebase_frequency = 0;
-  uint32_t d_cache_size = 0, d_cache_line_size = 0;
-  uint32_t i_cache_size = 0, i_cache_line_size = 0;
-  uint32_t l2cr = 0, l3cr = 0;
-  oftree_string_t cpu_name;
+  ppc_cpuinfo_t *acip = (ppc_cpuinfo_t *)(cip->opaque);
+  if (acip == NULL)
+	return -1;
 
-  oftree_property_t oftree_props[] = {
-	{ "clock-frequency",		&clock_frequency,		OF_PROP_TYPE_INT_AUTO, },
-	{ "timebase-frequency",		&timebase_frequency,	OF_PROP_TYPE_INT_AUTO },
-	{ "d-cache-size",			&d_cache_size,			OF_PROP_TYPE_INT_32 },
-	{ "d-cache-line-size",		&d_cache_line_size,		OF_PROP_TYPE_INT_32 },
-	{ "i-cache-size",			&i_cache_size,			OF_PROP_TYPE_INT_32 },
-	{ "i-cache-line-size",		&i_cache_line_size,		OF_PROP_TYPE_INT_32 },
-	{ "l2cr",					&l2cr,					OF_PROP_TYPE_INT_32 },
-	{ "l3cr",					&l3cr,					OF_PROP_TYPE_INT_32 },
-	{ "name",					&cpu_name,				OF_PROP_TYPE_STRING },
-	{ NULL, }
-  };
+  of_info_t of_info;
+  if (of_get_properties(&of_info) < 0)
+	return -1;
 
-  int i;
-  int n_cpus = 0;
-  char path[PATH_MAX];
-  struct dirent *de;
-  static const char oftree_cpus[] = "/proc/device-tree/cpus";
-  DIR *d = opendir(oftree_cpus);
-  while ((de = readdir(d)) != NULL) {
-	if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
-	  continue;
-	struct stat st;
-	int ret = snprintf(path, sizeof(path), "%s/%s", oftree_cpus, de->d_name);
-	if (ret < 0 || ret >= sizeof(path))
-	  continue;
-	stat(path, &st);
-	if (!S_ISDIR(st.st_mode))
-	  continue;
-	++n_cpus;
-	if (n_cpus == 1) {
-	  for (i = 0; oftree_props[i].node != NULL; i++) {
-		oftree_property_t *pnode = &oftree_props[i];
-		int ret = snprintf(path, sizeof(path), "%s/%s/%s", oftree_cpus, de->d_name, pnode->node);
-		if (ret < 0 || ret >= sizeof(path))
-		  continue;
-		if (get_property(pnode, path) < 0)
-		  D(bug("failed to read property %s\n", path));
-	  }
-	}
-  }
-  fprintf(out, "System with %d CPUs\n", n_cpus);
+  of_info_t *ofip = &of_info;
+  fprintf(out, "System with %d CPUs\n", ofip->n_cpus);
   fprintf(out, "\n");
 
-  ppc_cpuinfo_t *acip = (ppc_cpuinfo_t *)(cip->opaque);
+  int i;
   fprintf(out, "%-30s %08x\n", "pvr", acip->pvr);
-
-  for (i = 0; oftree_props[i].node != NULL; i++) {
-	oftree_property_t *pnode = &oftree_props[i];
+  for (i = 0; ofip->of_properties[i].node != NULL; i++) {
+	of_property_t *pnode = &ofip->of_properties[i];
 	switch (pnode->type) {
-	case OF_PROP_TYPE_INT_32:
+	case OF_TYPE_INT_32:
 	  fprintf(out, "%-30s %08x\n", pnode->node, *((uint32_t *)(pnode->var)));
 	  break;
-	case OF_PROP_TYPE_INT_64:
+	case OF_TYPE_INT_64:
 	  fprintf(out, "%-30s %" PRIx64 "\n", pnode->node, *((uint64_t *)(pnode->var)));
 	  break;
-	case OF_PROP_TYPE_STRING:
+	case OF_TYPE_STRING:
 	  fprintf(out, "%-30s '%s'\n", pnode->node, (char *)pnode->var);
 	  break;
 	}
@@ -689,6 +751,59 @@ int cpuinfo_arch_get_threads(struct cpuinfo *cip)
   return -1;
 }
 
+// Decode L2 Control Register
+static int decode_l2cr(struct cpuinfo *cip, cpuinfo_cache_descriptor_t *cdp)
+{
+  if (cip == NULL || cdp == NULL)
+	return -1;
+
+  ppc_cpuinfo_t *acip = (ppc_cpuinfo_t *)(cip->opaque);
+  if (acip == NULL)
+	return -1;
+
+  uint32_t l2cr = acip->l2cr;
+  if (l2cr == 0 || (l2cr & 0x80000000) == 0)
+	return -1;
+
+  if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_MOTOROLA) {
+	cdp->level = 2;
+	cdp->type = CPUINFO_CACHE_TYPE_UNIFIED; // XXX check L2IO/L2DO?
+	switch ((l2cr >> 28) & 3) {
+	case 0: cdp->size = 2048;	break;
+	case 1:	cdp->size = 256;	break;
+	case 2: cdp->size = 512;	break;
+	case 3: cdp->size = 1024;	break;
+	}
+	return 0;
+  }
+  
+  return -1;
+}
+
+// Decode L3 Control Register
+static int decode_l3cr(struct cpuinfo *cip, cpuinfo_cache_descriptor_t *cdp)
+{
+  if (cip == NULL || cip->opaque == NULL || cdp == NULL)
+	return -1;
+
+  ppc_cpuinfo_t *acip = (ppc_cpuinfo_t *)(cip->opaque);
+  if (acip == NULL)
+	return -1;
+
+  uint32_t l3cr = acip->l3cr;
+  if (l3cr == 0 || (l3cr & 0x80000000) == 0)
+	return -1;
+
+  if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_MOTOROLA) {
+	cdp->level = 3;
+	cdp->type = CPUINFO_CACHE_TYPE_UNIFIED; // XXX check L3IO/L3DO?
+	cdp->size = ((l3cr >> 28) & 1) ? 2048 : 1024;
+	return 0;
+  }
+
+  return -1;
+}
+
 // Get cache information
 cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 {
@@ -700,6 +815,13 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	  if (spec->caches[i])
 		cpuinfo_caches_list_insert(spec->caches[i]);
 	}
+
+	cpuinfo_cache_descriptor_t cache_desc;
+	if (decode_l2cr(cip, &cache_desc) == 0)
+	  cpuinfo_caches_list_insert(&cache_desc);
+	if (decode_l3cr(cip, &cache_desc) == 0)
+	  cpuinfo_caches_list_insert(&cache_desc);
+
 	return caches_list;
   }
 
