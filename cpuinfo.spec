@@ -46,6 +46,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
+%doc README COPYING NEWS
 %{_bindir}/cpuinfo
 
 %files devel
@@ -54,5 +55,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libcpuinfo.a
 
 %changelog
-* Fri Apr 13 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.1
+* Sun Apr 15 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.1
 - initial packaging

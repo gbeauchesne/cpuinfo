@@ -97,6 +97,7 @@ endif
 archivedir	= files/
 SRCARCHIVE	= $(PACKAGE)-$(VERSION)$(VERSION_SUFFIX).tar
 FILES		= configure Makefile $(PACKAGE).spec
+FILES		+= README NEWS TODO COPYING ChangeLog
 FILES		+= $(wildcard src/*.c)
 FILES		+= $(wildcard src/*.h)
 
