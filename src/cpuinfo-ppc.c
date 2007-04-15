@@ -648,7 +648,7 @@ static int cpuinfo_arch_init(ppc_cpuinfo_t *acip)
 // Returns a new cpuinfo descriptor
 int cpuinfo_arch_new(struct cpuinfo *cip)
 {
-  ppc_cpuinfo_t *p = malloc(sizeof(*p));
+  ppc_cpuinfo_t *p = (ppc_cpuinfo_t *)malloc(sizeof(*p));
   if (p == NULL)
 	return -1;
   if (cpuinfo_arch_init(p) < 0) {
@@ -733,7 +733,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 {
   const ppc_spec_t *spec = get_ppc_spec(cip);
   if (spec && spec->model) {
-	char *model = malloc(strlen(spec->model) + 1);
+	char *model = (char *)malloc(strlen(spec->model) + 1);
 	if (model == NULL)
 	  return NULL;
 	strcpy(model, spec->model);

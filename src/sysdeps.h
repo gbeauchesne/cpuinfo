@@ -25,9 +25,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <assert.h>
+
+#if defined HAVE_STDINT_H
+#include <stdint.h>
+#elif defined HAVE_INTTYPES_H
+#include <inttypes.h>
+#elif defined HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
 
 // Private interface specification
 #ifdef HAVE_VISIBILITY_ATTRIBUTE

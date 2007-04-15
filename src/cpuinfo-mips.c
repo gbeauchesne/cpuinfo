@@ -212,10 +212,9 @@ static int cpuinfo_arch_init(mips_cpuinfo_t *acip)
   memset(&acip->features, 0, sizeof(acip->features));
 
   cpuinfo_list_t caches_list = NULL;
-  cpuinfo_cache_descriptor_t cache_desc;
-
 #if defined __sgi
   inv_state_t *isp = NULL;
+  cpuinfo_cache_descriptor_t cache_desc;
   if (setinvent_r(&isp) < 0)
 	return -1;
   inventory_t *inv;
@@ -299,7 +298,7 @@ static int cpuinfo_arch_init(mips_cpuinfo_t *acip)
 // Returns a new cpuinfo descriptor
 int cpuinfo_arch_new(struct cpuinfo *cip)
 {
-  mips_cpuinfo_t *p = malloc(sizeof(*p));
+  mips_cpuinfo_t *p = (mips_cpuinfo_t *)malloc(sizeof(*p));
   if (p == NULL)
 	return -1;
   if (cpuinfo_arch_init(p) < 0) {
@@ -343,7 +342,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 {
   const char *imodel = ((mips_cpuinfo_t *)(cip->opaque))->model;
   if (imodel) {
-	char *model = malloc(strlen(imodel) + 1);
+	char *model = (char *)malloc(strlen(imodel) + 1);
 	if (model)
 	  strcpy(model, imodel);
 	return model;

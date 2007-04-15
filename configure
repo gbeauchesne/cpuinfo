@@ -183,7 +183,7 @@ cat > $TMPC << EOF
 #define COMPILER_NAME "icc"
 #elif defined __GNUC__
 #define COMPILER_NAME "gcc"
-#elif defined __sgi && _SGI_COMPILER_VERSION > 0
+#elif defined __sgi
 #define COMPILER_NAME "mipspro"
 #else
 #define COMPILER_NAME "unknown"
@@ -211,15 +211,56 @@ check_cc_option() {
     return 1
 }
 
+# check for C++ compiler
+is_cxx_compiler() {
+    cat > $TMPC << EOF
+#ifndef __cplusplus
+#error "This is not a C++ compiler"
+#endif
+class A { };
+EOF
+    if $cc -c $TMPC -o $TMPO > /dev/null 2>&1; then
+	rm -f $TMPC $TMPO
+	return 0
+    fi
+    rm -f $TMPC
+    return 1
+}
+
 # check for C99 support
-if test "$compiler" = "mipspro"; then
-    if check_cc_option -c99; then
-	cc="$cc -c99"
-    else
-	echo "ERROR: Unsupported C compiler, try with a C++ compiler?"
-	exit 1
+if ! is_cxx_compiler; then
+    if test "$compiler" = "gcc"; then
+	if check_cc_option -std=gnu99; then
+	    cc="$cc -std=gnu99"
+	fi
+    elif test "$compiler" = "mipspro"; then
+	if check_cc_option -c99; then
+	    cc="$cc -c99"
+	fi
     fi
 fi
+cat > $TMPC << EOF
+/* Only check for features we want */
+int main(void)
+{
+    int n = 0, v = 0;
+    for (int i = 0; i < 4; i++) {
+      --n;
+      int j = n * i;
+      v += j;
+    }
+    return 0;
+}
+EOF
+if ! $cc $TMPC -o $TMPE > /dev/null 2>&1; then
+    if is_cxx_compiler; then
+	echo "ERROR: Unsupported C++ compiler"
+    else
+	echo "ERROR: Unsupported C compiler, try with a C++ compiler?"
+    fi
+    exit 1
+fi
+rm -f $TMPC $TMPE
 
 # check for CFLAGS
 if test -z "$CFLAGS"; then
@@ -390,6 +431,19 @@ if test "$has_visibility_attribute" = "yes"; then
 else
     echo "#undef HAVE_VISIBILITY_ATTRIBUTE" >> $config_h
 fi
+
+# check for headers defining fixed-size integers
+for header in stdint.h inttypes.h sys/types.h; do
+    cat > $TMPC << EOF
+#include <$header>
+int main(void) { return !(sizeof(uint32_t) == 4); }
+EOF
+    if $cc $TMPC -o $TMPE > /dev/null 2>&1; then
+	header_def=`echo "$header" | tr '[:lower:]./-' '[:upper:]___'`
+	echo "#define HAVE_$header_def 1" >> $config_h
+    fi
+    rm -f $TMPC $TMPE
+done
 
 # build tree in object directory if source path is different from current one
 if test "$source_path_used" = "yes" ; then
