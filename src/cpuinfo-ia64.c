@@ -22,14 +22,23 @@
 #include "cpuinfo.h"
 #include "cpuinfo-private.h"
 
+#if defined __hpux
+#include <unistd.h>
+#include <sys/pstat.h>
+#endif
+
 #define DEBUG 1
 #include "debug.h"
 
 // Extract CPUID registers
 static uint64_t cpuid(int reg)
 {
-  uint64_t value;
+  uint64_t value = 0;
+#if defined __GNUC__
   __asm__ __volatile__ ("mov %0=cpuid[%1]" : "=r" (value) : "r" (reg));
+#elif defined __HP_cc || defined __HP_aCC
+  value = _Asm_mov_from_cpuid(reg);
+#endif
   return value;
 }
 
@@ -52,16 +61,15 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
   acip->frequency = 0;
   memset(&acip->features, 0, sizeof(acip->features));
 
-#if defined __GNUC__
   for (int i = 0; i <= 3; i++)
 	acip->cpuid[i] = cpuid(i);
   if ((acip->cpuid[3] & 0xff) >= 4)
 	acip->cpuid[4] = cpuid(4);
-#endif
 
   if (acip->cpuid[3] == 0)
 	return -1;
 
+  // Determine caches hierarchy
 #if defined __linux__
   char line[256];
   char dummy[256];
@@ -102,6 +110,7 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
   }
 #endif
 
+  // Determine CPU clock frequency
 #if defined __linux__
   FILE *proc_file = fopen("/proc/cpuinfo", "r");
   if (proc_file) {
@@ -117,6 +126,13 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
 	  if (sscanf(line, "cpu MHz : %fMHz", &f) == 1)
 		acip->frequency = (int)f;
 	}
+  }
+#elif defined __hpux
+  struct pst_processor proc;
+  if (pstat_getprocessor(&proc, sizeof(proc), 1, 0) == 1) {
+	long clk_tck;
+	if ((clk_tck = sysconf(_SC_CLK_TCK)) != -1)
+	  acip->frequency = proc.psp_iticksperclktick * clk_tck / 1000000;
   }
 #endif
 
@@ -164,8 +180,10 @@ int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
   fprintf(out, "%-10s : %d\n", "archrev", (int)((acip->cpuid[3] >> 32) & 0xff));
   fprintf(out, "\n");
 
-  for (int i = 0; i < N_CPUID_REGISTERS; i++)
-	fprintf(out, "CPUID Register %d : %016lx\n", i, acip->cpuid[i]);
+  for (int i = 0; i < N_CPUID_REGISTERS; i++) {
+	fprintf(out, "CPUID Register %d : %08x%08x\n", i,
+			(uint32_t)(acip->cpuid[i] >> 32), (uint32_t)acip->cpuid[i]);
+  }
 
   return 0;
 }

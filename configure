@@ -64,6 +64,9 @@ cygwin*)
 irix*)
     target_os="irix"
     ;;
+hp-ux*)
+    target_os="hpux"
+    ;;
 esac
 
 # find source path
@@ -354,6 +357,10 @@ elif test "$target_os" = "irix"; then
     echo "OS=irix" >> $config_mak
     echo "#define TARGET_IRIX 1" >> $config_h
     echo "#define TARGET_OS \"irix\"" >> $config_h
+elif test "$target_os" = "hpux"; then
+    echo "OS=hpux" >> $config_mak
+    echo "#define TARGET_HPUX 1" >> $config_h
+    echo "#define TARGET_OS \"hpux\"" >> $config_h
 else
     echo "ERROR: Unsupported OS"
     exit 1
