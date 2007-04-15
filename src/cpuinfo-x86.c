@@ -297,53 +297,72 @@ static char *get_model_amd(struct cpuinfo *cip)
 	char model;
   }
   BrandTable[64] = {
-	[0x00] = { "Engineering Sample",	    },
-	[0x04] = { "Athlon 64 %d00+",		'X' },
-	[0x05] = { "Athlon 64 X2 %d00+",	'X' },
-	[0x08] = { "Athlon 64 %d00+",		'X' },
-	[0x09] = { "Athlon 64 %d00+",		'X' },
-	[0x0A] = { "Turion 64 ML-%d",		'X' },
-	[0x0B] = { "Turion 64 MT-%d",		'X' },
-	[0x0C] = { "Opteron 1%d",			'Y' },
-	[0x0D] = { "Opteron 1%d",			'Y' },
-	[0x0E] = { "Opteron 1%d HE",		'Y' },
-	[0x0F] = { "Opteron 1%d EE",		'Y' },
-	[0x10] = { "Opteron 2%d",			'Y' },
-	[0x11] = { "Opteron 2%d",			'Y' },
-	[0x12] = { "Opteron 2%d HE",		'Y' },
-	[0x13] = { "Opteron 2%d EE",		'Y' },
-	[0x14] = { "Opteron 8%d",			'Y' },
-	[0x15] = { "Opteron 8%d",			'Y' },
-	[0x16] = { "Opteron 8%d HE",		'Y' },
-	[0x17] = { "Opteron 8%d EE",		'Y' },
-	[0x18] = { "Athlon 64 %d00+",		'E' },
-	[0x1D] = { "Athlon XP-M %d00+",		'X' },
-	[0x1E] = { "Athlon XP-M %d00+",		'X' },
-	[0x20] = { "Athlon XP %d00+",		'X' },
-	[0x21] = { "Sempron %d00+",			'T' },
-	[0x22] = { "Sempron %d00+",			'T' },
-	[0x23] = { "Sempron %d00+",			'T' },
-	[0x24] = { "Athlon 64 FX-%d",		'Z' },
-	[0x26] = { "Sempron %d00+",			'T' },
-	[0x29] = { "Opteron 1%d SE",		'R' },
-	[0x2A] = { "Opteron 2%d SE",		'R' },
-	[0x2B] = { "Opteron 8%d SE",		'R' },
-	[0x2C] = { "Opteron 1%d",			'R' },
-	[0x2D] = { "Opteron 1%d",			'R' },
-	[0x2E] = { "Opteron 1%d HE",		'R' },
-	[0x2F] = { "Opteron 1%d EE",		'R' },
-	[0x30] = { "Opteron 2%d",			'R' },
-	[0x31] = { "Opteron 2%d",			'R' },
-	[0x32] = { "Opteron 2%d HE",		'R' },
-	[0x33] = { "Opteron 2%d EE",		'R' },
-	[0x34] = { "Opteron 8%d",			'R' },
-	[0x35] = { "Opteron 8%d",			'R' },
-	[0x36] = { "Opteron 8%d HE",		'R' },
-	[0x37] = { "Opteron 8%d EE",		'R' },
-	[0x38] = { "Opteron 1%d",			'R' },
-	[0x39] = { "Opteron 2%d",			'R' },
-	[0x3A] = { "Opteron 8%d",			'R' }
+	{ "Engineering Sample",		    }, /* 0x00 */
+	{ NULL,						    }, /* 0x01 */
+	{ NULL,						    }, /* 0x02 */
+	{ NULL,						    }, /* 0x03 */
+	{ "Athlon 64 %d00+",		'X' }, /* 0x04 */
+	{ "Athlon 64 X2 %d00+",		'X' }, /* 0x05 */
+	{ NULL,						    }, /* 0x06 */
+	{ NULL,						    }, /* 0x07 */
+	{ "Athlon 64 %d00+",		'X' }, /* 0x08 */
+	{ "Athlon 64 %d00+",		'X' }, /* 0x09 */
+	{ "Turion 64 ML-%d",		'X' }, /* 0x0A */
+	{ "Turion 64 MT-%d",		'X' }, /* 0x0B */
+	{ "Opteron 1%d",			'Y' }, /* 0x0C */
+	{ "Opteron 1%d",			'Y' }, /* 0x0D */
+	{ "Opteron 1%d HE",			'Y' }, /* 0x0E */
+	{ "Opteron 1%d EE",			'Y' }, /* 0x0F */
+	{ "Opteron 2%d",			'Y' }, /* 0x10 */
+	{ "Opteron 2%d",			'Y' }, /* 0x11 */
+	{ "Opteron 2%d HE",			'Y' }, /* 0x12 */
+	{ "Opteron 2%d EE",			'Y' }, /* 0x13 */
+	{ "Opteron 8%d",			'Y' }, /* 0x14 */
+	{ "Opteron 8%d",			'Y' }, /* 0x15 */
+	{ "Opteron 8%d HE",			'Y' }, /* 0x16 */
+	{ "Opteron 8%d EE",			'Y' }, /* 0x17 */
+	{ "Athlon 64 %d00+",		'E' }, /* 0x18 */
+	{ NULL,						    }, /* 0x19 */
+	{ NULL,						    }, /* 0x1A */
+	{ NULL,						    }, /* 0x1B */
+	{ NULL,						    }, /* 0x1C */
+	{ "Athlon XP-M %d00+",		'X' }, /* 0x1D */
+	{ "Athlon XP-M %d00+",		'X' }, /* 0x1E */
+	{ NULL,						    }, /* 0x1F */
+	{ "Athlon XP %d00+",		'X' }, /* 0x20 */
+	{ "Sempron %d00+",			'T' }, /* 0x21 */
+	{ "Sempron %d00+",			'T' }, /* 0x22 */
+	{ "Sempron %d00+",			'T' }, /* 0x23 */
+	{ "Athlon 64 FX-%d",		'Z' }, /* 0x24 */
+	{ NULL,						    }, /* 0x01 */
+	{ "Sempron %d00+",			'T' }, /* 0x26 */
+	{ NULL,						    }, /* 0x27 */
+	{ NULL,						    }, /* 0x28 */
+	{ "Opteron 1%d SE",			'R' }, /* 0x29 */
+	{ "Opteron 2%d SE",			'R' }, /* 0x2A */
+	{ "Opteron 8%d SE",			'R' }, /* 0x2B */
+	{ "Opteron 1%d",			'R' }, /* 0x2C */
+	{ "Opteron 1%d",			'R' }, /* 0x2D */
+	{ "Opteron 1%d HE",			'R' }, /* 0x2E */
+	{ "Opteron 1%d EE",			'R' }, /* 0x2F */
+	{ "Opteron 2%d",			'R' }, /* 0x30 */
+	{ "Opteron 2%d",			'R' }, /* 0x31 */
+	{ "Opteron 2%d HE",			'R' }, /* 0x32 */
+	{ "Opteron 2%d EE",			'R' }, /* 0x33 */
+	{ "Opteron 8%d",			'R' }, /* 0x34 */
+	{ "Opteron 8%d",			'R' }, /* 0x35 */
+	{ "Opteron 8%d HE",			'R' }, /* 0x36 */
+	{ "Opteron 8%d EE",			'R' }, /* 0x37 */
+	{ "Opteron 1%d",			'R' }, /* 0x38 */
+	{ "Opteron 2%d",			'R' }, /* 0x39 */
+	{ "Opteron 8%d",			'R' }, /* 0x3A */
+	{ NULL,						    }, /* 0x3B */
+	{ NULL,						    }, /* 0x3C */
+	{ NULL,						    }, /* 0x3D */
+	{ NULL,						    }, /* 0x3E */
+	{ NULL,						    }  /* 0x3F */
   };
+  assert((sizeof(BrandTable) / sizeof(BrandTable[0])) == 64);
 
   int model_number = BrandTable[BrandTableIndex].model;
   switch (model_number) {
