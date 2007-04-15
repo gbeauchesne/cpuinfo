@@ -225,6 +225,7 @@ static jmp_buf cpuinfo_env; // XXX use a lock!
 
 static void sigill_handler(int sig)
 {
+  assert(sig == SIGILL);
   longjmp(cpuinfo_env, 1);
 }
 
@@ -283,8 +284,10 @@ const char *cpuinfo_string_of_vendor(int vendor)
   case CPUINFO_VENDOR_IBM:			str = "IBM";		break;
   case CPUINFO_VENDOR_INTEL:		str = "Intel";		break;
   case CPUINFO_VENDOR_MOTOROLA:		str = "Motorola";	break;
+  case CPUINFO_VENDOR_MIPS:			str = "MIPS Technologies";			break;
   case CPUINFO_VENDOR_NEXTGEN:		str = "NextGen";	break;
   case CPUINFO_VENDOR_NSC:			str = "National Semiconductor";		break;
+  case CPUINFO_VENDOR_PMC:			str = "PMC-Sierra";	break;
   case CPUINFO_VENDOR_RISE:		    str = "Rise Technology";			break;
   case CPUINFO_VENDOR_SIS:		    str = "SiS";		break;
   case CPUINFO_VENDOR_TRANSMETA:	str = "Transmeta";	break;
@@ -373,6 +376,12 @@ static const cpuinfo_feature_string_t ppc_feature_strings[] = {
 
 static const int n_ppc_feature_strings = sizeof(ppc_feature_strings) / sizeof(ppc_feature_strings[0]);
 
+static const cpuinfo_feature_string_t mips_feature_strings[] = {
+  DEFINE_(MIPS,			"[mips]",	"-- mips-specific features --"						),
+};
+
+static const int n_mips_feature_strings = sizeof(mips_feature_strings) / sizeof(mips_feature_strings[0]);
+
 #undef DEFINE_
 
 static const cpuinfo_feature_string_t *cpuinfo_feature_string_ptr(int feature)
@@ -391,6 +400,10 @@ static const cpuinfo_feature_string_t *cpuinfo_feature_string_ptr(int feature)
   case CPUINFO_FEATURE_PPC:
 	fsp = ppc_feature_strings;
 	fss = n_ppc_feature_strings;
+	break;
+  case CPUINFO_FEATURE_MIPS:
+	fsp = mips_feature_strings;
+	fss = n_mips_feature_strings;
 	break;
   }
   if (fsp) {

@@ -4,8 +4,6 @@
 #
 -include config.mak
 
-CFLAGS += -Wall
-
 ifeq ($(SRC_PATH),)
 SRC_PATH = .
 endif
