@@ -431,7 +431,6 @@ static const cpuinfo_feature_string_t *cpuinfo_feature_string_ptr(int feature)
 #endif
   }
   return NULL;
-  return fsp ? &fsp[feature & CPUINFO_FEATURE_MASK] : NULL;
 }
 
 const char *cpuinfo_string_of_feature(int feature)
