@@ -21,6 +21,10 @@
 #ifndef CPUINFO_PRIVATE_H
 #define CPUINFO_PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define CPUINFO_FEATURES_SZ_(NAME) \
 		(1 + ((CPUINFO_FEATURE_##NAME##_MAX - CPUINFO_FEATURE_##NAME) / 32))
 
@@ -121,5 +125,9 @@ extern uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature) at
 
 // Returns 0 if CPU supports the specified feature
 extern int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature) attribute_hidden;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CPUINFO_PRIVATE_H */

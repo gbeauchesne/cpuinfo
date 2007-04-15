@@ -32,7 +32,7 @@
 // Returns a new cpuinfo descriptor
 struct cpuinfo *cpuinfo_new(void)
 {
-  cpuinfo_t *cip = malloc(sizeof(*cip));
+  cpuinfo_t *cip = (cpuinfo_t *)malloc(sizeof(*cip));
   if (cip) {
 	cip->vendor = -1;
 	cip->model = NULL;
@@ -84,7 +84,7 @@ const char *cpuinfo_get_model(struct cpuinfo *cip)
 	cip->model = cpuinfo_arch_get_model(cip);
 	if (cip->model == NULL) {
 	  static const char unknown_model[] = "<unknown>";
-	  if ((cip->model = malloc(sizeof(unknown_model))) == NULL)
+	  if ((cip->model = (char *)malloc(sizeof(unknown_model))) == NULL)
 		return NULL;
 	  strcpy(cip->model, unknown_model);
 	}
@@ -144,8 +144,8 @@ int cpuinfo_get_threads(struct cpuinfo *cip)
 // Cache descriptor comparator
 static int cache_desc_compare(const void *a, const void *b)
 {
-  const cpuinfo_cache_descriptor_t *cdp1 = a;
-  const cpuinfo_cache_descriptor_t *cdp2 = b;
+  const cpuinfo_cache_descriptor_t *cdp1 = (const cpuinfo_cache_descriptor_t *)a;
+  const cpuinfo_cache_descriptor_t *cdp2 = (const cpuinfo_cache_descriptor_t *)b;
 
   if (cdp1->type == cdp2->type)
 	return cdp1->level - cdp2->level;
@@ -194,7 +194,7 @@ const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
 		++count;
 		p = p->next;
 	  }
-	  if ((descs = malloc(count * sizeof(*descs))) != NULL) {
+	  if ((descs = (cpuinfo_cache_descriptor_t *)malloc(count * sizeof(*descs))) != NULL) {
 		p = caches_list;
 		for (i = 0; i < count; i++) {
 		  memcpy(&descs[i], p->data, sizeof(*descs));
@@ -443,7 +443,7 @@ int cpuinfo_list_clear(cpuinfo_list_t *lp)
 int (cpuinfo_list_insert)(cpuinfo_list_t *lp, const void *ptr, int size)
 {
   assert(lp != NULL);
-  cpuinfo_list_t p = malloc(sizeof(*p));
+  cpuinfo_list_t p = (cpuinfo_list_t)malloc(sizeof(*p));
   if (p == NULL)
 	return -1;
   p->next = *lp;

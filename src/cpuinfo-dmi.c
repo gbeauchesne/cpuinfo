@@ -34,7 +34,7 @@
 
 #define DEFAULT_MEM_DEV "/dev/mem"
 
-static void *mem_chunk(uint32_t base, uint32_t len, const char *devmem)
+static uint8_t *mem_chunk(uint32_t base, uint32_t len, const char *devmem)
 {
   int fd;
   void *p;
@@ -57,7 +57,7 @@ static void *mem_chunk(uint32_t base, uint32_t len, const char *devmem)
   memcpy(p, (uint8_t *)mmp + mmoffset, len);
   munmap(mmp, mmoffset + len);
   close(fd);
-  return p;
+  return (uint8_t *)p;
 }
 
 struct dmi_header {

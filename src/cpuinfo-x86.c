@@ -63,7 +63,7 @@ typedef struct x86_cpuinfo x86_cpuinfo_t;
 // Returns a new cpuinfo descriptor
 int cpuinfo_arch_new(struct cpuinfo *cip)
 {
-  x86_cpuinfo_t *p = malloc(sizeof(*p));
+  x86_cpuinfo_t *p = (x86_cpuinfo_t *)malloc(sizeof(*p));
   if (p == NULL)
 	return -1;
   memset(p->features, 0, sizeof(p->features));
@@ -172,7 +172,7 @@ static char *get_model_amd_npt(struct cpuinfo *cip)
   uint32_t PwrLmt = ((BrandId >> 5) & 0xe) | ((BrandId >> 14) & 1);		// BrandId[8:6,14]
   uint32_t BrandTableIndex = (BrandId >> 9) & 0x1f;						// BrandId[13:9]
   uint32_t NN = ((BrandId >> 9) & 0x40) | (BrandId & 0x3f);				// BrandId[15,5:0]
-  uint32_t CmpCap = cpuinfo_get_cores(cip) > 1;
+  int CmpCap = cpuinfo_get_cores(cip) > 1;
 
   typedef struct processor_name_string {
 	int8_t cmp;
@@ -240,7 +240,7 @@ static char *get_model_amd_npt(struct cpuinfo *cip)
 	  case 'Z': model_number = 57 + NN; break;
 	  case 'Y': model_number = 29 + NN; break;
 	  }
-	  char *model = malloc(64);
+	  char *model = (char *)malloc(64);
 	  if (model) {
 		if (model_number)
 		  sprintf(model, mp->name, model_number);
@@ -359,7 +359,7 @@ static char *get_model_amd(struct cpuinfo *cip)
   if (name == NULL)
 	return NULL;
 
-  char *model = malloc(64);
+  char *model = (char *)malloc(64);
   if (model) {
 	if (model_number)
 	  sprintf(model, name, model_number);
@@ -380,14 +380,14 @@ static char *get_model_intel(struct cpuinfo *cip)
 // FIXME: better go through the troubles of decoding tables to have clean names
 static const char *goto_next_block(const char *cp)
 {
-  while (*cp && !isblank(*cp) && *cp != '(')
+  while (*cp && *cp != ' ' && *cp != '(')
 	++cp;
   return cp;
 }
 
 static const char *skip_blanks(const char *cp)
 {
-  while (*cp && isblank(*cp))
+  while (*cp && *cp == ' ')
 	++cp;
   return cp;
 }
@@ -421,7 +421,7 @@ static int freq_string(const char *cp, const char *ep)
 
 static char *sanitize_brand_id_string(const char *str)
 {
-  char *model = malloc(64);
+  char *model = (char *)malloc(64);
   if (model == NULL)
 	return NULL;
   const char *cp;
@@ -515,7 +515,7 @@ static int os_get_frequency(void)
 	  // Parse line
 	  float f;
 	  if (sscanf(line, "cpu MHz : %f", &f) == 1)
-		freq = f;
+		freq = (int)f;
 	}
 	fclose(proc_file);
   }
@@ -841,8 +841,8 @@ static int bsf_clobbers_eflags(void)
 			int SF = (flags >>  7) & 1;
 			int ZF = (flags >>  6) & 1;
 			int CF = flags & 1;
-			tmp = (value == 0);
-			if (ZF != tmp || SF != g_SF || OF != g_OF || CF != g_CF)
+			int r_ZF = (value == 0);
+			if (ZF != r_ZF || SF != g_SF || OF != g_OF || CF != g_CF)
 				mismatch = 1;
 		  }
 		}

@@ -21,6 +21,10 @@
 #ifndef CPUINFO_H
 #define CPUINFO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // cpuinfo_t is a private data structure
 struct cpuinfo;
 
@@ -161,5 +165,9 @@ extern const char *cpuinfo_string_of_socket(int socket);
 extern const char *cpuinfo_string_of_cache_type(int cache_type);
 extern const char *cpuinfo_string_of_feature(int feature);
 extern const char *cpuinfo_string_of_feature_detail(int feature);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CPUINFO_H */
