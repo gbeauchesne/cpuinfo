@@ -96,7 +96,9 @@ static void print_cpuinfo(struct cpuinfo *cip, FILE *out)
   } features_bits[] = {
 	{ CPUINFO_FEATURE_COMMON + 1, CPUINFO_FEATURE_COMMON_MAX },
 	{ CPUINFO_FEATURE_X86, CPUINFO_FEATURE_X86_MAX },
+	{ CPUINFO_FEATURE_IA64, CPUINFO_FEATURE_IA64_MAX },
 	{ CPUINFO_FEATURE_PPC, CPUINFO_FEATURE_PPC_MAX },
+	{ CPUINFO_FEATURE_MIPS, CPUINFO_FEATURE_MIPS_MAX },
 	{ -1, 0 }
   };
   for (i = 0; features_bits[i].base != -1; i++) {
@@ -107,7 +109,10 @@ static void print_cpuinfo(struct cpuinfo *cip, FILE *out)
 	  if (cpuinfo_has_feature(cip, feature)) {
 		const char *name = cpuinfo_string_of_feature(feature);
 		const char *detail = cpuinfo_string_of_feature_detail(feature);
-		fprintf(out, "  %-10s %s\n", name, detail);
+		if (name && detail)
+		  fprintf(out, "  %-10s %s\n", name, detail);
+		else
+		  fprintf(out, "  %-10s No description for feature %08x\n", "<error>", feature);
 	  }
 	}
   }

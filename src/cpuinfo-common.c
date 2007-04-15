@@ -368,6 +368,15 @@ static const cpuinfo_feature_string_t x86_feature_strings[] = {
 
 static const int n_x86_feature_strings = sizeof(x86_feature_strings) / sizeof(x86_feature_strings[0]);
 
+static const cpuinfo_feature_string_t ia64_feature_strings[] = {
+  DEFINE_(IA64,			"[ia64]",	"-- ia64-specific features --"						),
+  DEFINE_(IA64_LB,		"lb",		"Long branch (brl) instruction available"			),
+  DEFINE_(IA64_SD,		"sd",		"Spontaneous deferral supported"					),
+  DEFINE_(IA64_AO,		"ao",		"16-byte atomic operations"							),
+};
+
+static const int n_ia64_feature_strings = sizeof(ia64_feature_strings) / sizeof(ia64_feature_strings[0]);
+
 static const cpuinfo_feature_string_t ppc_feature_strings[] = {
   DEFINE_(PPC,			"[ppc]",	"-- ppc-specific features --"						),
   DEFINE_(PPC_VMX,		"vmx",		"Vector instruction set (AltiVec, VMX)"				),
@@ -396,6 +405,10 @@ static const cpuinfo_feature_string_t *cpuinfo_feature_string_ptr(int feature)
   case CPUINFO_FEATURE_X86:
 	fsp = x86_feature_strings;
 	fss = n_x86_feature_strings;
+	break;
+  case CPUINFO_FEATURE_IA64:
+	fsp = ia64_feature_strings;
+	fss = n_ia64_feature_strings;
 	break;
   case CPUINFO_FEATURE_PPC:
 	fsp = ppc_feature_strings;

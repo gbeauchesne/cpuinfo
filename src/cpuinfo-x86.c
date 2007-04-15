@@ -691,6 +691,9 @@ intel_cache_table[] = {
   { 0x08, C_(1, CODE),		   16 }, // 4-way set assoc, 32 byte line size
   { 0x0a, C_(1, DATA),		    8 }, // 2 way set assoc, 32 byte line size
   { 0x0c, C_(1, DATA),		   16 }, // 4-way set assoc, 32 byte line size
+  { 0x10, C_(1, DATA),		   16 }, // 4-way set assoc, 64 byte line size
+  { 0x15, C_(1, CODE),		   16 }, // 4-way set assoc, 64 byte line size
+  { 0x1a, C_(2, UNIFIED),	   96 }, // 6-way set assoc, 64 byte line size
   { 0x22, C_(3, UNIFIED),	  512 }, // 4-way set assoc, sectored cache, 64 byte line size
   { 0x23, C_(3, UNIFIED),	 1024 }, // 8-way set assoc, sectored cache, 64 byte line size
   { 0x25, C_(3, UNIFIED),	 2048 }, // 8-way set assoc, sectored cache, 64 byte line size
@@ -723,11 +726,13 @@ intel_cache_table[] = {
   { 0x71, C_(0, TRACE),		   16 }, // 8-way set assoc
   { 0x72, C_(0, TRACE),		   32 }, // 8-way set assoc
   { 0x73, C_(0, TRACE),		   64 }, // 8-way set assoc
+  { 0x77, C_(1, CODE),		   16 }, // 4-way set assoc, sectored cache, 64 byte line size
   { 0x78, C_(2, UNIFIED),	 1024 }, // 4-way set assoc, 64 byte line size
   { 0x79, C_(2, UNIFIED),	  128 }, // 8-way set assoc, sectored cache, 64 byte line size
   { 0x7a, C_(2, UNIFIED),	  256 }, // 8-way set assoc, sectored cache, 64 byte line size
   { 0x7b, C_(2, UNIFIED),	  512 }, // 8-way set assoc, sectored cache, 64 byte line size
   { 0x7c, C_(2, UNIFIED),	 1024 }, // 8-way set assoc, sectored cache, 64 byte line size
+  { 0x7e, C_(2, UNIFIED),	  256 }, // 8-way set assoc, sectored cache, 128 byte line size
   { 0x7d, C_(2, UNIFIED),	 2048 }, // 8-way set assoc, 64 byte line size
   { 0x7f, C_(2, UNIFIED),	  512 }, // 2-way set assoc, 64 byte line size
   { 0x82, C_(2, UNIFIED),	  256 }, // 8-way set assoc, 32 byte line size
@@ -736,6 +741,10 @@ intel_cache_table[] = {
   { 0x85, C_(2, UNIFIED),	 2048 }, // 8-way set assoc, 32 byte line size
   { 0x86, C_(2, UNIFIED),	  512 }, // 4-way set assoc, 64 byte line size
   { 0x87, C_(2, UNIFIED),	 1024 }, // 8-way set assoc, 64 byte line size
+  { 0x88, C_(3, UNIFIED),	 2048 }, // 4-way set assoc, 64 byte line size
+  { 0x89, C_(3, UNIFIED),	 4096 }, // 4-way set assoc, 64 byte line size
+  { 0x8a, C_(3, UNIFIED),	 8192 }, // 4-way set assoc, 64 byte line size
+  { 0x8d, C_(3, UNIFIED),	 3072 }, // 12-way set assoc, 128 byte line size
   { 0x00, C_(0, UNKNOWN),	    0 }
 #undef C_
 };

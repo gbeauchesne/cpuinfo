@@ -383,6 +383,11 @@ elif test "$target_cpu" = "mips" ; then
     echo "CPUINFO_ARCH=mips" >> $config_mak
     echo "#define TARGET_MIPS 1" >> $config_h
     echo "#define TARGET_ARCH \"mips\"" >> $config_h
+elif test "$target_cpu" = "ia64" ; then
+    echo "ARCH=ia64" >> $config_mak
+    echo "CPUINFO_ARCH=ia64" >> $config_mak
+    echo "#define TARGET_IA64 1" >> $config_h
+    echo "#define TARGET_ARCH \"ia64\"" >> $config_h
 else
     echo "ERROR: Unsupported CPU"
     exit 1
