@@ -325,57 +325,86 @@ const char *cpuinfo_string_of_cache_type(int cache_type)
 }
 
 typedef struct {
+#ifndef HAVE_DESIGNATED_INITIALIZERS
+  int feature;
+#endif
   const char *name;
   const char *detail;
 } cpuinfo_feature_string_t;
 
+#ifdef HAVE_DESIGNATED_INITIALIZERS
+#define DEFINE_(ID, NAME, DETAIL) \
+		[CPUINFO_FEATURE_##ID & CPUINFO_FEATURE_MASK] = { NAME, DETAIL }
+#else
+#define DEFINE_(ID, NAME, DETAIL) \
+		{ CPUINFO_FEATURE_##ID, NAME, DETAIL }
+#endif
+
 static const cpuinfo_feature_string_t common_feature_strings[] = {
-#define CPUINFO_(NAME) (CPUINFO_FEATURE_##NAME & CPUINFO_FEATURE_MASK)
-  [CPUINFO_(64BIT)] = { "64bit", "64-bit capable" },
-  [CPUINFO_(SIMD)] = { "simd", "SIMD capable" },
-#undef CPUINFO_
+  DEFINE_(64BIT,		"64bit",	"64-bit capable"									),
+  DEFINE_(SIMD,			"simd",		"SIMD capable"										),
 };
+
+static const int n_common_feature_strings = sizeof(common_feature_strings) / sizeof(common_feature_strings[0]);
 
 static const cpuinfo_feature_string_t x86_feature_strings[] = {
-  { "[x86]", "-- x86-specific features --" },
-#define CPUINFO_(NAME) (CPUINFO_FEATURE_X86_##NAME & CPUINFO_FEATURE_MASK)
-  [CPUINFO_(CMOV)] = { "cmov", "Conditional Moves" },
-  [CPUINFO_(MMX)] = { "mmx", "MMX Technology" },
-  [CPUINFO_(SSE)] = { "sse", "SSE Technology" },
-  [CPUINFO_(SSE2)] = { "sse2", "SSE2 Technology" },
-  [CPUINFO_(SSE3)] = { "pni", "SSE3 Technology (Prescott New Instructions)" },
-  [CPUINFO_(SSSE3)] = { "mni", "SSSE3 Technology (Merom New Instructions)" },
-  [CPUINFO_(SSE4)] = { "nni", "SSE4 Technology (Nehalem New Instructions)" },
-  [CPUINFO_(VMX)] = { "vmx", "Intel Virtualisation Technology (VT)" },
-  [CPUINFO_(SVM)] = { "svm", "AMD-v Technology (Pacifica)" },
-  [CPUINFO_(LM)]= { "lm", "Long Mode (64-bit capable)" },
-  [CPUINFO_(LAHF64)] = { "lahf_lm", "LAHF/SAHF Supported in 64-bit mode" },
-  [CPUINFO_(BSFCC)] = { "bsf_cc", "BSF instruction clobbers condition codes" },
-#undef CPUINFO_
+  DEFINE_(X86,			"[x86]",	"-- x86-specific features --"						),
+  DEFINE_(X86_CMOV,		"cmov",		"Conditional Moves"									),
+  DEFINE_(X86_MMX,		"mmx",		"MMX Technology"									),
+  DEFINE_(X86_SSE,		"sse",		"SSE Technology"									),
+  DEFINE_(X86_SSE2,		"sse2",		"SSE2 Technology"									),
+  DEFINE_(X86_SSE3,		"pni",		"SSE3 Technology (Prescott New Instructions)"		),
+  DEFINE_(X86_SSSE3,	"mni",		"SSSE3 Technology (Merom New Instructions)"			),
+  DEFINE_(X86_SSE4,		"nni",		"SSE4 Technology (Nehalem New Instructions)"		),
+  DEFINE_(X86_VMX,		"vmx",		"Intel Virtualisation Technology (VT)"				),
+  DEFINE_(X86_SVM,		"svm",		"AMD-v Technology (Pacifica)"						),
+  DEFINE_(X86_LM,		"lm",		"Long Mode (64-bit capable)"						),
+  DEFINE_(X86_LAHF64,	"lahf_lm",	"LAHF/SAHF Supported in 64-bit mode"				),
+  DEFINE_(X86_BSFCC,	"bsf_cc",	"BSF instruction clobbers condition codes"			),
 };
 
+static const int n_x86_feature_strings = sizeof(x86_feature_strings) / sizeof(x86_feature_strings[0]);
+
 static const cpuinfo_feature_string_t ppc_feature_strings[] = {
-  { "[ppc]", "-- ppc-specific features --" },
-#define CPUINFO_(NAME) (CPUINFO_FEATURE_PPC_##NAME & CPUINFO_FEATURE_MASK)
-  [CPUINFO_(VMX)] = { "vmx", "Vector instruction set (AltiVec, VMX)" },
-  [CPUINFO_(FSQRT)] = { "fsqrt", "Floating-point Square Root support in hardware" },
-#undef CPUINFO_
+  DEFINE_(PPC,			"[ppc]",	"-- ppc-specific features --"						),
+  DEFINE_(PPC_VMX,		"vmx",		"Vector instruction set (AltiVec, VMX)"				),
+  DEFINE_(PPC_FSQRT,	"fsqrt",	"Floating-point Square Root support in hardware"	),
 };
+
+static const int n_ppc_feature_strings = sizeof(ppc_feature_strings) / sizeof(ppc_feature_strings[0]);
+
+#undef DEFINE_
 
 static const cpuinfo_feature_string_t *cpuinfo_feature_string_ptr(int feature)
 {
+  int fss = -1;
   const cpuinfo_feature_string_t *fsp = NULL;
   switch (feature & CPUINFO_FEATURE_ARCH) {
   case CPUINFO_FEATURE_COMMON:
 	fsp = common_feature_strings;
+	fss = n_common_feature_strings;
 	break;
   case CPUINFO_FEATURE_X86:
 	fsp = x86_feature_strings;
+	fss = n_x86_feature_strings;
 	break;
   case CPUINFO_FEATURE_PPC:
 	fsp = ppc_feature_strings;
+	fss = n_ppc_feature_strings;
 	break;
   }
+  if (fsp) {
+#ifdef HAVE_DESIGNATED_INITIALIZERS
+	return &fsp[feature & CPUINFO_FEATURE_MASK];
+#else
+	int i;
+	for (i = 0; i < fss; i++) {
+	  if (fsp[i].feature == feature)
+		return &fsp[i];
+	}
+#endif
+  }
+  return NULL;
   return fsp ? &fsp[feature & CPUINFO_FEATURE_MASK] : NULL;
 }
 

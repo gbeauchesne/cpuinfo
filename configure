@@ -134,6 +134,21 @@ if test -z "$libdir"; then
     esac
 fi
 
+# check for designated initializers support
+cat > $TMPC << EOF
+static const int a[6] = { [4] = 4, [2] = 2 };
+int main(void) {
+  return !(a[0] == 0 && a[2] == 2 && a[4] == 4 && a[5] == 0);
+}
+EOF
+has_designated_initializers=no
+if $cc $TMPC -o $TMPE >/dev/null 2>&1; then
+    if $TMPE; then
+	has_designated_initializers=yes
+    fi
+fi
+rm -f $TMPC $TMPE
+
 # check for __attribute__((visibility())) support
 cat > $TMPC << EOF
 int foo __attribute__((visibility("hidden"))) = 1;
@@ -304,6 +319,11 @@ else
     echo "#define CPUINFO_VERSION \"$VERSION\"" >> $config_h
 fi
 
+if test "$has_designated_initializers" = "yes"; then
+    echo "#define HAVE_DESIGNATED_INITIALIZERS 1" >> $config_h
+else
+    echo "#undef HAVE_DESIGNATED_INITIALIZERS" >> $config_h
+fi
 if test "$has_visibility_attribute" = "yes"; then
     echo "#define HAVE_VISIBILITY_ATTRIBUTE 1" >> $config_h
 else
