@@ -122,6 +122,33 @@ if test "$install_sdk" = "yes"; then
     build_static="yes"
 fi
 
+# print configure help
+if test x"$1" = x"-h" -o x"$1" = x"--help" ; then
+cat << EOF
+
+Usage: configure [options]
+Options: [defaults in brackets after descriptions]
+
+EOF
+echo "Standard options:"
+echo "  --help                      print this message"
+echo "  --prefix=PREFIX             install in PREFIX [$prefix]"
+echo "  --libdir=LIBDIR             use LIBDIR for native libraries [$libdir]"
+echo "  --enable-static             build static libraries [$build_static]"
+echo "  --enable-shared             build shared libraries [$build_shared]"
+echo "  --install-sdk               install headers and libraries [$install_sdk]"
+echo ""
+echo "Advanced options (experts only):"
+echo "  --source-path=PATH          path of source code [$source_path]"
+echo "  --with-cc=CC                use C compiler CC [$cc]"
+echo "  --target-os=OS              cross-compile for target OS [$target_os]"
+echo "  --target-cpu=CPU            cross-compile for target CPU [$target_cpu]"
+echo "  --install-stripped          strip libraries and binaries [$install_stripped]"
+echo ""
+echo "NOTE: The object files are built at the place where configure is launched"
+exit 1
+fi
+
 # check for libdir name
 if test -z "$libdir"; then
     case $target_os in
@@ -282,33 +309,7 @@ if check_cc_option -Wall; then
     CFLAGS="$CFLAGS -Wall"
 fi
 
-# print configure help
-if test x"$1" = x"-h" -o x"$1" = x"--help" ; then
-cat << EOF
-
-Usage: configure [options]
-Options: [defaults in brackets after descriptions]
-
-EOF
-echo "Standard options:"
-echo "  --help                      print this message"
-echo "  --prefix=PREFIX             install in PREFIX [$prefix]"
-echo "  --libdir=LIBDIR             use LIBDIR for native libraries [$libdir]"
-echo "  --enable-static             build static libraries [$build_static]"
-echo "  --enable-shared             build shared libraries [$build_shared]"
-echo "  --install-sdk               install headers and libraries [$install_sdk]"
-echo ""
-echo "Advanced options (experts only):"
-echo "  --source-path=PATH          path of source code [$source_path]"
-echo "  --with-cc=CC                use C compiler CC [$cc]"
-echo "  --target-os=OS              cross-compile for target OS [$target_os]"
-echo "  --target-cpu=CPU            cross-compile for target CPU [$target_cpu]"
-echo "  --install-stripped          strip libraries and binaries [$install_stripped]"
-echo ""
-echo "NOTE: The object files are built at the place where configure is launched"
-exit 1
-fi
-
+# Print configuration summary
 echo "Install prefix            $prefix"
 echo "Library prefix            $libdir"
 echo "Source path               $source_path"
