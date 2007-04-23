@@ -254,22 +254,12 @@ static char *get_model_amd_npt(struct cpuinfo *cip)
   return NULL;
 }
 
-static char *get_model_amd(struct cpuinfo *cip)
+static char *get_model_amd_k8(struct cpuinfo *cip)
 {
-  uint32_t cpuid_level;
-  cpuid(0, &cpuid_level, NULL, NULL, NULL);
-  if (cpuid_level < 1)
-	return NULL;
-
+  // assume we are a valid AMD K8 Family processor
   uint32_t eax, ebx;
   cpuid(1, &eax, &ebx, NULL, NULL);
   uint32_t eightbit_brand_id = ebx & 0xff;
-
-  cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
-  if ((cpuid_level & 0xffff0000) != 0x80000000)
-	return NULL;
-  if (cpuid_level < 0x80000001)
-	return NULL;
 
   if ((eax & 0xffffff00) == 0x00040f00)
 	return get_model_amd_npt(cip);
@@ -387,6 +377,59 @@ static char *get_model_amd(struct cpuinfo *cip)
   }
 
   return model;
+}
+
+static char *get_model_amd_k7(struct cpuinfo *cip)
+{
+  // XXX to be filled in later
+  return NULL;
+}
+
+static char *get_model_amd(struct cpuinfo *cip)
+{
+  // assume we are a valid AMD processor
+  uint32_t cpuid_level;
+  cpuid(0, &cpuid_level, NULL, NULL, NULL);
+  if (cpuid_level < 1)
+	return NULL;
+
+  uint32_t eax;
+  cpuid(1, &eax, NULL, NULL, NULL);
+  if ((eax & 0xfff0ff00) == 0x00000f00)
+	return get_model_amd_k8(cip);
+
+  // AMD Processor Recognition Application Note for Processors Prior to AMD Family OFh Processors (Rev 3.13)
+  if ((eax & 0xf00) == 0x600)
+	return get_model_amd_k7(cip);
+
+  const char *processor = NULL;
+  switch ((eax >> 4) & 0xff) {
+  case 0x50:
+  case 0x51:
+  case 0x52:
+  case 0x53:
+	processor = "K5";
+	break;
+  case 0x56:
+  case 0x57:
+	processor = "K6";
+	break;
+  case 0x58:
+	processor = "K6-2";
+	break;
+  case 0x59:
+	processor = "K6-III";
+	break;
+  }
+
+  if (processor) {
+	char *model = (char *)malloc(strlen(processor) + 1);
+	if (model)
+	  strcpy(model, processor);
+	return model;
+  }
+
+  return NULL;
 }
 
 // Get Intel processor name
