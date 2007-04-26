@@ -172,7 +172,7 @@ enum {
   CPUINFO_FEATURE_MIPS_MAX
 };
 
-// Returns 0 if CPU supports the specified feature
+// Returns 1 if CPU supports the specified feature
 extern int cpuinfo_has_feature(struct cpuinfo *cip, int feature);
 
 // Utility functions to convert IDs

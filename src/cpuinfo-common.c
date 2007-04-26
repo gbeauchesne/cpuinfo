@@ -210,7 +210,7 @@ const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip)
   return &cip->cache_info;
 }
 
-// Returns 0 if CPU supports the specified feature
+// Returns 1 if CPU supports the specified feature
 int cpuinfo_has_feature(struct cpuinfo *cip, int feature)
 {
   return cpuinfo_arch_has_feature(cip, feature);

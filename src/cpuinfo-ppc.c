@@ -884,7 +884,7 @@ static void check_hwcap_fsqrt(void)
   __asm__ __volatile__ (".long 0xfc00002c"); // fsqrt f0,f0
 }
 
-// Returns 0 if CPU supports the specified feature
+// Returns 1 if CPU supports the specified feature
 int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 {
   if (!cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_PPC)) {

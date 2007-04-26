@@ -123,7 +123,7 @@ extern cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip) attribute_hid
 // Returns features table
 extern uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature) attribute_hidden;
 
-// Returns 0 if CPU supports the specified feature
+// Returns 1 if CPU supports the specified feature
 extern int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature) attribute_hidden;
 
 #ifdef __cplusplus

@@ -938,7 +938,7 @@ uint32_t *cpuinfo_arch_feature_table(struct cpuinfo *cip, int feature)
 #define feature_get_bit(NAME) cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86_##NAME)
 #define feature_set_bit(NAME) cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_X86_##NAME)
 
-// Returns 0 if CPU supports the specified feature
+// Returns 1 if CPU supports the specified feature
 int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 {
   if (!cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_X86)) {
