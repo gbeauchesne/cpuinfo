@@ -21,7 +21,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-extern void cpuinfo_set_debug_file(FILE *debug_file) attribute_hidden;
+extern void cpuinfo_set_debug_file(FILE *debug_file);
 extern void cpuinfo_dprintf(const char *format, ...) attribute_hidden;
 
 #if DEBUG
