@@ -4,9 +4,16 @@
 #define svndate	DATE
 
 # Define to build shared libraries
-%define build_shared 1
+%define build_shared 0
 %{expand: %{?_with_shared:		%%global build_shared 1}}
 %{expand: %{?_without_shared:	%%global build_shared 0}}
+
+# Define to build perl bindings
+%define build_perl 0
+%{expand: %{?_with_perl:		%%global build_perl 1}}
+%{expand: %{?_without_perl:		%%global build_perl 0}}
+
+%define perlarchlib %(perl -e 'use Config; print $Config{sitearch}')
 
 Summary:	Print CPU information
 Name:		%{name}
@@ -31,17 +38,28 @@ Group:		Development/C
 This package contains headers and libraries needed to use cpuinfo
 processor characterisation features.
 
+%package -n perl-Cpuinfo
+Summary:	Perl bindings for cpuinfo
+Group:		Development/Perl
+
+%description -n perl-Cpuinfo
+Provides a Perl API to the cpuinfo library.
+
 %prep
 %setup -q
 
 %build
 mkdir objs
 pushd objs
-../configure --prefixs=%{_prefix} --libdir=%{_libdir} \
+../configure \
 	--install-sdk \
 %if %{build_shared}
 	--enable-shared \
 %endif
+%if %{build_perl}
+	--enable-perl \
+%endif
+	--prefix=%{_prefix} --libdir=%{_libdir}
 make
 popd
 
@@ -49,6 +67,11 @@ popd
 rm -rf $RPM_BUILD_ROOT
 
 make -C objs install DESTDIR=$RPM_BUILD_ROOT
+
+# nuke unpackaged files
+find $RPM_BUILD_ROOT -name cpuinfo.pl -exec rm -f {} \;
+find $RPM_BUILD_ROOT -name perllocal.pod -exec rm -f {} \;
+find $RPM_BUILD_ROOT -name .packlist -exec rm -f {} \;
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -67,6 +90,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libcpuinfo.a
 %if %{build_shared}
 %{_libdir}/libcpuinfo.so
+%endif
+
+%if %{build_perl}
+%files -n perl-Cpuinfo
+%defattr(-,root,root)
+%doc src/bindings/perl/cpuinfo.pl
+%{perlarchlib}/Cpuinfo.pm
+%dir %{perlarchlib}/auto/Cpuinfo
+%{perlarchlib}/auto/Cpuinfo/*
 %endif
 
 %changelog

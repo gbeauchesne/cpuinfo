@@ -145,8 +145,6 @@ ifeq ($(install_sdk),yes)
 	mkdir -p $(DESTDIR)$(includedir)
 endif
 
-install.perl: perl.install
-
 install.bins: $(cpuinfo_PROGRAM)
 	$(INSTALL) -m 755 $(INSTALL_STRIPPED) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
 
@@ -170,6 +168,11 @@ install.headers:
 	$(INSTALL) -m 644 $(SRC_PATH)/src/cpuinfo.h $(DESTDIR)$(includedir)/
 else
 install.headers:
+endif
+ifeq ($(build_perl),yes)
+install.perl: perl.install
+else
+install.perl:
 endif
 
 $(archivedir)::
@@ -195,8 +198,9 @@ $(archivedir)$(SRCARCHIVE).bz2: $(archivedir)$(SRCARCHIVE)
 
 RPMBUILD = \
 	RPMDIR=`mktemp -d`								; \
-	mkdir -p $$RPMDIR/{SPECS,SOURCES,BUILD,RPMS,SRPMS}				; \
-	rpmbuild --define "_topdir $$RPMDIR" -ta $(2) $(1) &&				  \
+	mkdir -p $$RPMDIR/{SPECS,SOURCES,BUILD,RPMS,SRPMS,tmp}				; \
+	rpmbuild --define "_topdir $$RPMDIR" --define "_tmppath $$RPMDIR/tmp"		  \
+		 -ta $(2) $(1) &&							  \
 	find $$RPMDIR/ -name *.rpm -exec mv -f {} $(archivedir) \;			; \
 	rm -rf $$RPMDIR
 
@@ -227,15 +231,11 @@ $(libcpuinfo_so_LTLIBRARY): $(libcpuinfo_so_OBJECTS)
 
 perl: $(perl_bindings_LIB)
 perl.clean:
-ifeq ($(build_perl),yes)
 	@[ -f $(perl_bindings_DIR)/Makefile ] && \
 	$(MAKE) -C $(perl_bindings_DIR) realclean || :
-endif
 perl.install: $(perl_bindings_LIB)
-ifeq ($(build_perl),yes)
 	@[ -f $(perl_bindings_DIR)/Makefile ] && \
 	$(MAKE) -C $(perl_bindings_DIR) install DESTDIR=$(DESTDIR)
-endif
 $(perl_bindings_LIB): $(libcpuinfo_module) $(perl_bindings_FILES)
 	@cd $(perl_bindings_DIR) && \
 	$(PERL) Makefile.PL \
