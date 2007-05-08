@@ -3,6 +3,11 @@
 %define release	0.1
 #define svndate	DATE
 
+# Define to build shared libraries
+%define build_shared 1
+%{expand: %{?_with_shared:		%%global build_shared 1}}
+%{expand: %{?_without_shared:	%%global build_shared 0}}
+
 Summary:	Print CPU information
 Name:		%{name}
 Version:	%{version}
@@ -32,7 +37,11 @@ processor characterisation features.
 %build
 mkdir objs
 pushd objs
-../configure --prefixs=%{_prefix} --libdir=%{_libdir} --install-sdk
+../configure --prefixs=%{_prefix} --libdir=%{_libdir} \
+	--install-sdk \
+%if %{build_shared}
+	--enable-shared \
+%endif
 make
 popd
 
@@ -48,11 +57,17 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc README COPYING NEWS
 %{_bindir}/cpuinfo
+%if %{build_shared}
+%{_libdir}/libcpuinfo.so.*
+%endif
 
 %files devel
 %defattr(-,root,root)
 %{_includedir}/cpuinfo.h
 %{_libdir}/libcpuinfo.a
+%if %{build_shared}
+%{_libdir}/libcpuinfo.so
+%endif
 
 %changelog
 * Sun Apr 15 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.1
