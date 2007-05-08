@@ -438,6 +438,48 @@ static char *get_model_intel(struct cpuinfo *cip)
   return NULL;
 }
 
+// Get Centaur processor name
+static char *get_model_centaur(struct cpuinfo *cip)
+{
+  // assume we are a valid Centaur processor
+  uint32_t eax;
+  cpuid(1, &eax, NULL, NULL, NULL);
+
+  const char *processor = NULL;
+  switch ((eax >> 4) & 0xff) {
+  case 0x66:
+	processor = "VIA C3 [Samuel]";
+	break;
+  case 0x67:
+	if (eax & 8)
+	  processor = "VIA C3 [Ezra]";
+	else
+	  processor = "VIA C3 [Samuel 2]";
+	break;
+  case 0x68:
+	processor = "VIA C3 [Ezra-T]";
+	break;
+  case 0x69:
+	processor = "VIA C3 [Nehemiah]";
+	break;
+  case 0x6a:
+	if (eax & 8)
+	  processor = "VIA C7-M [Esther]";
+	else
+	  processor = "VIA C7 [Esther]";
+	break;
+  }
+
+  if (processor) {
+	char *model = (char *)malloc(strlen(processor) + 1);
+	if (model)
+	  strcpy(model, processor);
+	return model;
+  }
+
+  return NULL;
+}
+
 // Sanitize BrandID string
 // FIXME: better go through the troubles of decoding tables to have clean names
 static const char *goto_next_block(const char *cp)
@@ -523,6 +565,9 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 	break;
   case CPUINFO_VENDOR_INTEL:
 	model = get_model_intel(cip);
+	break;
+  case CPUINFO_VENDOR_CENTAUR:
+	model = get_model_centaur(cip);
 	break;
   }
 
