@@ -1,0 +1,7 @@
+constants.gen
+cpuinfo.pl
+Cpuinfo.pm
+Cpuinfo.xs
+Makefile.PL
+MANIFEST
+typemap

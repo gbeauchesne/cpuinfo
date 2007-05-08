@@ -24,6 +24,7 @@ libdir=""
 cc="cc"
 build_static="no"
 build_shared="no"
+build_perl="no"
 install_sdk="no"
 install_stripped="no"
 target_os=`uname -s | tr '[A-Z]' '[a-z]'`
@@ -106,6 +107,12 @@ case "$opt" in
 --disable-shared)
     build_shared="no"
     ;;
+--enable-perl)
+    build_perl="yes"
+    ;;
+--disable-perl)
+    build_perl="no"
+    ;;
 --install-sdk)
     install_sdk="yes"
     ;;
@@ -136,6 +143,7 @@ echo "  --prefix=PREFIX             install in PREFIX [$prefix]"
 echo "  --libdir=LIBDIR             use LIBDIR for native libraries [$libdir]"
 echo "  --enable-static             build static libraries [$build_static]"
 echo "  --enable-shared             build shared libraries [$build_shared]"
+echo "  --enable-perl               build Perl bindings [$build_perl]"
 echo "  --install-sdk               install headers and libraries [$install_sdk]"
 echo ""
 echo "Advanced options (experts only):"
@@ -316,6 +324,7 @@ echo "Source path               $source_path"
 echo "C compiler                $cc"
 echo "Build static libraries    $build_static"
 echo "Build shared libraries    $build_shared"
+echo "Build perl bindings       $build_perl"
 echo "Install SDK               $install_sdk"
 echo "Install stripped          $install_stripped"
 echo "Target OS                 $target_os"
@@ -412,6 +421,7 @@ if test "$install_stripped" = "yes"; then
 fi
 echo "build_static=$build_static" >> $config_mak
 echo "build_shared=$build_shared" >> $config_mak
+echo "build_perl=$build_perl" >> $config_mak
 echo "install_sdk=$install_sdk" >> $config_mak
 
 VERSION=`sed < $source_path/$PACKAGE.spec -n '/^\%define version[	]*/s///p'`

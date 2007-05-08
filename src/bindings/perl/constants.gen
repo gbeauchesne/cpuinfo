@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+
+my $header = shift;
+$header or die "ERROR: unspecified source header file";
+-f $header or die "ERROR: source header file does not exist";
+
+my $gen_header = shift;
+$gen_header or die "ERROR: unspecified generated header file";
+
+sub cat_ {
+    open(my $F, $_[0]) or return;
+    my @l = <$F>;
+    wantarray() ? @l : join '', @l
+}
+
+sub gen_constants {
+    my $f = shift;
+    open(my $F, ">$f");
+    print $F "REGISTER_CONSTANT($_);\n" foreach @_;
+}
+
+my @constants = ();
+foreach (cat_("$header")) {
+    /^\s+CPUINFO_(\w+)/ and push @constants, $1;
+}
+
+gen_constants $gen_header, @constants;

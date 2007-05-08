@@ -40,6 +40,9 @@ endif
 ifeq ($(INSTALL),)
 INSTALL = install
 endif
+ifeq ($(PERL),)
+PERL = perl
+endif
 
 CPPFLAGS	= -I. -I$(SRC_PATH)
 PICFLAGS	= -fPIC
@@ -47,6 +50,13 @@ CC_FOR_SHARED	= $(CC)
 ifeq ($(OS),darwin)
 PICFLAGS	= -fno-common
 CC_FOR_SHARED	= DYLD_LIBRARY_PATH=. $(CC)
+endif
+
+libcpuinfo_a_needs_PIC	= no
+ifeq ($(build_shared),no)
+ifeq ($(build_perl),yes)
+libcpuinfo_a_needs_PIC	= yes
+endif
 endif
 
 libcpuinfo_a		= libcpuinfo.a
@@ -71,6 +81,12 @@ libcpuinfo_so_LDFLAGS	= -dynamiclib \
 endif
 libcpuinfo_so_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.os)
 
+libcpuinfo_module	= $(libcpuinfo_so)
+ifeq ($(libcpuinfo_a_needs_PIC),yes)
+libcpuinfo_a_OBJECTS	= $(libcpuinfo_so_OBJECTS)
+libcpuinfo_module	= $(libcpuinfo_a)
+endif
+
 cpuinfo_PROGRAM	= cpuinfo
 cpuinfo_SOURCES	= cpuinfo.c
 cpuinfo_OBJECTS	= $(cpuinfo_SOURCES:%.c=%.o)
@@ -86,12 +102,19 @@ cpuinfo_OBJECTS += $(libcpuinfo_a_OBJECTS)
 endif
 endif
 
+perl_bindings_DIR	= $(SRC_PATH)/src/bindings/perl
+perl_bindings_LIB	= $(perl_bindings_DIR)/blib/arch/auto/Cpuinfo/Cpuinfo.so
+perl_bindings_FILES	= $(patsubst %,$(perl_bindings_DIR)/%,$(shell cat $(perl_bindings_DIR)/MANIFEST))
+
 TARGETS		= $(cpuinfo_PROGRAM)
 ifeq ($(build_static),yes)
 TARGETS		+= $(libcpuinfo_a)
 endif
 ifeq ($(build_shared),yes)
 TARGETS		+= $(libcpuinfo_so)
+endif
+ifeq ($(build_perl),yes)
+TARGETS		+= perl
 endif
 
 archivedir	= files/
@@ -100,22 +123,19 @@ FILES		= configure Makefile $(PACKAGE).spec
 FILES		+= README NEWS TODO COPYING ChangeLog
 FILES		+= $(wildcard src/*.c)
 FILES		+= $(wildcard src/*.h)
+FILES		+= $(perl_bindings_FILES)
 
 all: $(TARGETS)
 
-clean:
+clean: perl.clean
 	rm -f $(TARGETS) *.o *.os
-ifeq ($(build_static),yes)
 	rm -f $(libcpuinfo_a) $(libcpuinfo_a_OBJECTS)
-endif
-ifeq ($(build_shared),yes)
 	rm -f $(libcpuinfo_so) $(libcpuinfo_so_SONAME) $(libcpuinfo_so_LTLIBRARY) $(libcpuinfo_so_OBJECTS)
-endif
 
 $(cpuinfo_PROGRAM): $(cpuinfo_OBJECTS) $(cpuinfo_DEPS)
 	$(CC_FOR_SHARED) -o $@ $(cpuinfo_OBJECTS) $(cpuinfo_LDFLAGS) $(LDFLAGS)
 
-install: install.dirs install.bins install.libs
+install: install.dirs install.bins install.libs install.perl
 install.dirs:
 	mkdir -p $(DESTDIR)$(bindir)
 ifeq (yes,$(findstring yes,$(build_static) $(build_shared)))
@@ -124,6 +144,8 @@ endif
 ifeq ($(install_sdk),yes)
 	mkdir -p $(DESTDIR)$(includedir)
 endif
+
+install.perl: perl.install
 
 install.bins: $(cpuinfo_PROGRAM)
 	$(INSTALL) -m 755 $(INSTALL_STRIPPED) $(cpuinfo_PROGRAM) $(DESTDIR)$(bindir)/
@@ -190,7 +212,7 @@ changelog: ../common/authors.xml
 	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS)
 
 %.os: $(SRC_PATH)/src/%.c
-	$(CC) -c $< -o $@  $(CPPFLAGS) $(CFLAGS) $(PICFLAGS)
+	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS) $(PICFLAGS)
 
 $(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
 	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
@@ -201,4 +223,23 @@ $(libcpuinfo_so): $(libcpuinfo_so_SONAME)
 $(libcpuinfo_so_SONAME): $(libcpuinfo_so_LTLIBRARY)
 	$(LN) -sf $< $@
 $(libcpuinfo_so_LTLIBRARY): $(libcpuinfo_so_OBJECTS)
-	$(CC) -o $@ $(libcpuinfo_so_OBJECTS) $(libcpuinfo_so_LDFLAGS) 
+	$(CC) -o $@ $(libcpuinfo_so_OBJECTS) $(libcpuinfo_so_LDFLAGS)
+
+perl: $(perl_bindings_LIB)
+perl.clean:
+ifeq ($(build_perl),yes)
+	@[ -f $(perl_bindings_DIR)/Makefile ] && \
+	$(MAKE) -C $(perl_bindings_DIR) realclean || :
+endif
+perl.install: $(perl_bindings_LIB)
+ifeq ($(build_perl),yes)
+	@[ -f $(perl_bindings_DIR)/Makefile ] && \
+	$(MAKE) -C $(perl_bindings_DIR) install DESTDIR=$(DESTDIR)
+endif
+$(perl_bindings_LIB): $(libcpuinfo_module) $(perl_bindings_FILES)
+	@cd $(perl_bindings_DIR) && \
+	$(PERL) Makefile.PL \
+		--cflags="$(CFLAGS)" \
+		--cpuinfo-incdir="$(PWD)/$(SRC_PATH)/src" \
+		--cpuinfo-libdir="$(PWD)" && \
+	$(MAKE)
