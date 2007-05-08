@@ -70,8 +70,11 @@ int cpuinfo_get_vendor(struct cpuinfo *cip)
 {
   if (cip == NULL)
 	return -1;
-  if (cip->vendor < 0)
+  if (cip->vendor < 0) {
 	cip->vendor = cpuinfo_arch_get_vendor(cip);
+	if (cip->vendor < 0)
+	  cip->vendor = CPUINFO_VENDOR_UNKNOWN;
+  }
   return cip->vendor;
 }
 
