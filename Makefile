@@ -237,9 +237,13 @@ perl.install: $(perl_bindings_LIB)
 	@[ -f $(perl_bindings_DIR)/Makefile ] && \
 	$(MAKE) -C $(perl_bindings_DIR) install DESTDIR=$(DESTDIR)
 $(perl_bindings_LIB): $(libcpuinfo_module) $(perl_bindings_FILES)
-	@cd $(perl_bindings_DIR) && \
+$(perl_bindings_LIB): $(libcpuinfo_module) $(perl_bindings_FILES)
+	@\
+	cpuinfo_incdir="`cd $(SRC_PATH) && pwd`/src" ; \
+	cpuinfo_libdir="$(PWD)" ; \
+	cd $(perl_bindings_DIR) && \
 	$(PERL) Makefile.PL \
 		--cflags="$(CFLAGS)" \
-		--cpuinfo-incdir="$(PWD)/$(SRC_PATH)/src" \
-		--cpuinfo-libdir="$(PWD)" && \
+		--cpuinfo-incdir="$${cpuinfo_incdir}" \
+		--cpuinfo-libdir="$${cpuinfo_libdir}" && \
 	$(MAKE)
