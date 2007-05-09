@@ -1,6 +1,6 @@
 %define name	cpuinfo
 %define version	1.0
-%define release	0.1
+%define release	0.2
 #define svndate	DATE
 
 # Define to build shared libraries
@@ -102,5 +102,11 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed May  9 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.2
+- fdd Perl bindings
+- fix detection of VIA processors (C3, C7)
+- fix detection of early AMD processors (K5, K6)
+- add more x86 feature flags (3dnow, sse4, popcnt)
+
 * Sun Apr 15 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.1
 - initial packaging
