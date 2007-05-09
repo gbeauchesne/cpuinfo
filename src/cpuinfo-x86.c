@@ -837,6 +837,62 @@ intel_cache_table[] = {
 #undef C_
 };
 
+enum {
+  CACHE_INFO_ERRATA_AMD_DURON = 1,	 // AMD K7 processors with CPUID=630h (Duron)
+  CACHE_INFO_ERRATA_VIA_C3_1,		 // VIA C3 processors with CPUID=670..68Fh
+  CACHE_INFO_ERRATA_VIA_C3_2,		 // VIA C3 processors with CPUID=691h ('Nehemiah' stepping 1)
+};
+
+static int has_cache_info_errata_amd(struct cpuinfo *cip, int errata)
+{
+  // XXX store F/M/S fields in x86_cpuinfo_t
+  uint32_t eax;
+  cpuid(1, &eax, NULL, NULL, NULL);
+  if ((eax & 0xfff) == 0x630) {
+	if (errata == CACHE_INFO_ERRATA_AMD_DURON) {
+	  D(bug("cpuinfo_get_cache: errata for AMD K7 processors with CPUID=630h (Duron)\n"));
+	  return 1;
+	}
+  }
+  return 0;
+}
+
+static int has_cache_info_errata_centaur(struct cpuinfo *cip, int errata)
+{
+  // XXX store F/M/S fields in x86_cpuinfo_t
+  uint32_t eax;
+  cpuid(1, &eax, NULL, NULL, NULL);
+  switch ((eax >> 4) & 0xff) {
+  case 0x67:
+  case 0x68:
+	if (errata == CACHE_INFO_ERRATA_VIA_C3_1) {
+	  D(bug("cpuinfo_get_cache: errata for VIA C3 processors with CPUID=670..68Fh\n"));
+	  return 1;
+	}
+	break;
+  case 0x69:
+	if ((eax & 0xf) == 1) {
+	  if (errata == CACHE_INFO_ERRATA_VIA_C3_2) {
+		D(bug("cpuinfo_get_cache: errata for VIA C3 processors with CPUID=691h ('Nehemiah' stepping 1)\n"));
+		return 1;
+	  }
+	}
+	break;
+  }
+  return 0;
+}
+
+static inline int has_cache_info_errata(struct cpuinfo *cip, int errata)
+{
+  switch (cpuinfo_get_vendor(cip)) {
+  case CPUINFO_VENDOR_AMD:
+	return has_cache_info_errata_amd(cip, errata);
+  case CPUINFO_VENDOR_CENTAUR:
+	return has_cache_info_errata_centaur(cip, errata);
+  }
+  return 0;
+}
+
 cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 {
   uint32_t cpuid_level;
@@ -927,11 +983,27 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	if (cpuid_level >= 0x80000006) {
 	  D(bug("cpuinfo_get_cache: cpuid(0x80000006)\n"));
 	  cpuid(0x80000006, NULL, NULL, &ecx, NULL);
-	  if (((ecx >> 12) & 0xffff) != 0) {
-		cache_desc.level = 2;
-		cache_desc.type = CPUINFO_CACHE_TYPE_UNIFIED;
-		cache_desc.size = (ecx >> 16) & 0xffff;
-		cpuinfo_caches_list_insert(&cache_desc);
+	  if (has_cache_info_errata(cip, CACHE_INFO_ERRATA_VIA_C3_1)) {
+		if (((ecx >> 16) & 0xffff) != 0) {
+		  cache_desc.level = 2;
+		  cache_desc.type = CPUINFO_CACHE_TYPE_UNIFIED;
+		  cache_desc.size = (ecx >> 24) & 0xff;
+		  cpuinfo_caches_list_insert(&cache_desc);
+		}
+	  }
+	  else {
+		if (((ecx >> 12) & 0xfffff) != 0) {
+		  cache_desc.level = 2;
+		  cache_desc.type = CPUINFO_CACHE_TYPE_UNIFIED;
+		  cache_desc.size = (ecx >> 16) & 0xffff;
+		  if (has_cache_info_errata(cip, CACHE_INFO_ERRATA_AMD_DURON))
+			cache_desc.size = 64;
+		  else if (has_cache_info_errata(cip, CACHE_INFO_ERRATA_VIA_C3_2)) {
+			if (cache_desc.size == 65)
+			  cache_desc.size = 64;
+		  }
+		  cpuinfo_caches_list_insert(&cache_desc);
+		}
 	  }
 	}
 	return caches_list;
