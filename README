@@ -5,11 +5,16 @@
   Copyright (C) 2005-2007 Gwenole Beauchesne
 
 
-License
--------
+Licenses
+--------
 
-cpuinfo is available under the terms of the GNU General Public License.
-See the file "COPYING" that is included in the distribution for details.
+The cpuinfo library is available under the terms of the GNU Lesser
+General Public License. See the file "COPYING.LIB" that is included
+in the distribution for details.
+
+The cpuinfo sample programs and bindings are available under the terms
+of the GNU General Public License. See the file "COPYING" that is
+included in the distribution for details.
 
 
 Overview

@@ -2,6 +2,7 @@ cpuinfo NEWS -- history of human-readable changes.  2007-04-15
 Copyright (C) 2006-2007 Gwenole Beauchesne
 
 Version 1.0 (SNAPSHOT) - XX.May.2007
+* Relicense the library under LGPL
 * Add Perl bindings
 * Fix detection of VIA processors (C3, C7)
 * Fix detection of early AMD processors (K5, K6)
