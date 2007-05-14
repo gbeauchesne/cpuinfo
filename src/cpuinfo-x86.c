@@ -707,9 +707,6 @@ int cpuinfo_arch_get_socket(struct cpuinfo *cip)
   if (cpuinfo_get_vendor(cip) == CPUINFO_VENDOR_AMD)
 	socket = cpuinfo_get_socket_amd();
 
-  if (socket < 0)
-	socket = cpuinfo_dmi_get_socket(cip);
-
   return socket;
 }
 
@@ -1009,7 +1006,7 @@ cpuinfo_list_t cpuinfo_arch_get_caches(struct cpuinfo *cip)
 	return caches_list;
   }
 
-  return cpuinfo_dmi_get_caches(cip);
+  return NULL;
 }
 
 static int bsf_clobbers_eflags(void)

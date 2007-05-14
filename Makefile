@@ -60,7 +60,7 @@ endif
 endif
 
 libcpuinfo_a		= libcpuinfo.a
-libcpuinfo_a_SOURCES	= debug.c cpuinfo-common.c cpuinfo-dmi.c cpuinfo-$(CPUINFO_ARCH).c
+libcpuinfo_a_SOURCES	= debug.c cpuinfo-common.c cpuinfo-$(CPUINFO_ARCH).c
 libcpuinfo_a_OBJECTS	= $(libcpuinfo_a_SOURCES:%.c=%.o)
 
 libcpuinfo_so_major	= 1

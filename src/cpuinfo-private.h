@@ -66,16 +66,6 @@ extern int cpuinfo_list_insert(cpuinfo_list_t *lp, const void *ptr, int size) at
 } while (0)
 
 /* ========================================================================= */
-/* == General Processor Information (DMI Interface)                       == */
-/* ========================================================================= */
-
-// Get processor socket ID
-extern int cpuinfo_dmi_get_socket(struct cpuinfo *cip) attribute_hidden;
-
-// Fill in cache descriptors
-extern cpuinfo_list_t cpuinfo_dmi_get_caches(struct cpuinfo *cip) attribute_hidden;
-
-/* ========================================================================= */
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
