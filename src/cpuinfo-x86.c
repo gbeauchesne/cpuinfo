@@ -435,6 +435,52 @@ static char *get_model_amd(struct cpuinfo *cip)
 // Get Intel processor name
 static char *get_model_intel(struct cpuinfo *cip)
 {
+  // assume we are a valid Intel processor
+  uint32_t cpuid_level;
+  cpuid(0, &cpuid_level, NULL, NULL, NULL);
+  if (cpuid_level < 1)
+	return NULL;
+
+  uint32_t eax, ebx;
+  cpuid(1, &eax, &ebx, NULL, NULL);
+  const char *processor = NULL;
+
+  // check Brand ID
+  uint32_t fms = eax & 0xfff;
+  uint32_t brand_id = ebx & 0xff;
+  if (brand_id) {
+	// AP485, Table 5-1
+	switch (brand_id) {
+	case 0x01: processor = "Celeron";											break;
+	case 0x02: processor = "Pentium III";										break;
+	case 0x03: processor = fms == 0x6b1 ? "Celeron" : "Pentium III Xeon";		break;
+	case 0x04: processor = "Pentium III";										break;
+	case 0x06: processor = "Mobile Pentium III";								break;
+	case 0x07: processor = "Mobile Celeron";									break;
+	case 0x08: processor = fms >= 0xf13 ? "Genuine" : "Pentium 4";				break;
+	case 0x09: processor = "Pentium 4";											break;
+	case 0x0a: processor = "Celeron";											break;
+	case 0x0b: processor = fms < 0xf13 ? "Xeon MP" : "Xeon";					break;
+	case 0x0c: processor = "Xeon MP";											break;
+	case 0x0e: processor = fms < 0xf13 ? "Xeon" : "Mobile Pentium 4";			break;
+	case 0x0f: processor = "Mobile Celeron";									break;
+	case 0x11: processor = "Mobile Genuine";									break;
+	case 0x12: processor = "Celeron M";											break;
+	case 0x13: processor = "Mobile Celeron";									break;
+	case 0x14: processor = "Celeron";											break;
+	case 0x15: processor = "Mobile Genuine";									break;
+	case 0x16: processor = "Pentium M";											break;
+	case 0x17: processor = "Mobile Celeron";									break;
+	}
+  }
+
+  if (processor) {
+	char *model = (char *)malloc(strlen(processor) + 1);
+	if (model)
+	  strcpy(model, processor);
+	return model;
+  }
+
   return NULL;
 }
 
@@ -523,7 +569,7 @@ static int freq_string(const char *cp, const char *ep)
 	&& (cp[0] == 'M' || cp[0] == 'G') && cp[1] == 'H' && cp[2] == 'z';
 }
 
-static char *sanitize_brand_id_string(const char *str)
+static char *sanitize_brand_string(const char *str)
 {
   char *model = (char *)malloc(64);
   if (model == NULL)
@@ -564,6 +610,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 	model = get_model_amd(cip);
 	break;
   case CPUINFO_VENDOR_INTEL:
+	// XXX proper identification sequence implies 0x80000004 first if supported
 	model = get_model_intel(cip);
 	break;
   case CPUINFO_VENDOR_CENTAUR:
@@ -580,7 +627,7 @@ char *cpuinfo_arch_get_model(struct cpuinfo *cip)
 	  cpuid(0x80000002, &m.r[0], &m.r[1], &m.r[2], &m.r[3]);
 	  cpuid(0x80000003, &m.r[4], &m.r[5], &m.r[6], &m.r[7]);
 	  cpuid(0x80000004, &m.r[8], &m.r[9], &m.r[10], &m.r[11]);
-	  model = sanitize_brand_id_string(m.str);
+	  model = sanitize_brand_string(m.str);
 	}
   }
 
