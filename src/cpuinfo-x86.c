@@ -1127,6 +1127,12 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 	  feature_set_bit(POPCNT);
 	if (ecx & (1 << 5))
 	  feature_set_bit(VMX);
+	if (edx & (1 << 29))
+	  feature_set_bit(TM);
+	if (ecx & (1 << 8))
+	  feature_set_bit(TM2);
+	if (ecx & (1 << 7))
+	  feature_set_bit(EIST);
 
 	cpuid(0x80000000, &eax, NULL, NULL, NULL);
 	if ((eax & 0xffff0000) == 0x80000000 && eax >= 0x80000001) {
@@ -1135,6 +1141,8 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 		feature_set_bit(SVM);
 	  if (ecx & (1 << 0))
 		feature_set_bit(LAHF64);
+	  if (edx & (1 << 20))
+		feature_set_bit(NX);
 	  if (edx & (1 << 29))
 		feature_set_bit(LM);
 	  if (edx & (1 << 31))
