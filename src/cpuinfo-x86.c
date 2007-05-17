@@ -106,6 +106,7 @@ int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
   }
   fprintf(out, "\n");
 
+  // Extended-level
   cpuid(0x80000000, &cpuid_level, NULL, NULL, NULL);
   if ((cpuid_level & 0xffff0000) == 0x80000000) {
 	fprintf(out, "Maximum supported extended level: %08x\n", cpuid_level);
@@ -113,8 +114,30 @@ int cpuinfo_dump(struct cpuinfo *cip, FILE *out)
 	  cpuid(i, &eax, &ebx, &ecx, &edx);
 	  fprintf(out, "%08x: eax %08x, ebx %08x, ecx %08x, edx %08x\n", i, eax, ebx, ecx, edx);
 	}
+	fprintf(out, "\n");
   }
-  fprintf(out, "\n");
+
+  // Transmeta level
+  cpuid(0x80860000, &cpuid_level, NULL, NULL, NULL);
+  if ((cpuid_level & 0xffff0000) == 0x80860000) {
+	fprintf(out, "Maximum supported Transmeta level: %08x\n", cpuid_level);
+	for (i = 0x80860000; i <= cpuid_level; i++) {
+	  cpuid(i, &eax, &ebx, &ecx, &edx);
+	  fprintf(out, "%08x: eax %08x, ebx %08x, ecx %08x, edx %08x\n", i, eax, ebx, ecx, edx);
+	}
+	fprintf(out, "\n");
+  }
+
+  // Centaur level
+  cpuid(0xc0000000, &cpuid_level, NULL, NULL, NULL);
+  if ((cpuid_level & 0xffff0000) == 0xc0000000) {
+	fprintf(out, "Maximum supported Centaur level: %08x\n", cpuid_level);
+	for (i = 0xc0000000; i <= cpuid_level; i++) {
+	  cpuid(i, &eax, &ebx, &ecx, &edx);
+	  fprintf(out, "%08x: eax %08x, ebx %08x, ecx %08x, edx %08x\n", i, eax, ebx, ecx, edx);
+	}
+	fprintf(out, "\n");
+  }
 
   return 0;
 }
