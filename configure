@@ -51,8 +51,11 @@ sparc64)
 x86_64|amd64)
     target_cpu="x86_64"
     ;;
-IP35)
+mips|IP27|IP35)
     target_cpu="mips"
+    ;;
+mips64)
+    target_cpu="mips64"
     ;;
 *)
     target_cpu="unknown"
@@ -400,6 +403,11 @@ elif test "$target_cpu" = "mips" ; then
     echo "CPUINFO_ARCH=mips" >> $config_mak
     echo "#define TARGET_MIPS 1" >> $config_h
     echo "#define TARGET_ARCH \"mips\"" >> $config_h
+elif test "$target_cpu" = "mips64" ; then
+    echo "ARCH=mips64" >> $config_mak
+    echo "CPUINFO_ARCH=mips" >> $config_mak
+    echo "#define TARGET_MIPS64 1" >> $config_h
+    echo "#define TARGET_ARCH \"mips64\"" >> $config_h
 elif test "$target_cpu" = "ia64" ; then
     echo "ARCH=ia64" >> $config_mak
     echo "CPUINFO_ARCH=ia64" >> $config_mak
