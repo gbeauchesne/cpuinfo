@@ -1199,6 +1199,7 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 		feature_get_bit(SSE2) ||
 		feature_get_bit(SSE3) ||
 		feature_get_bit(SSSE3) ||
+		feature_get_bit(SSE4A) ||
 		feature_get_bit(SSE4_1) ||
 		feature_get_bit(SSE4_2))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
