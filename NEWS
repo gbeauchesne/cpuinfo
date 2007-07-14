@@ -9,7 +9,7 @@ Version 1.0 (SNAPSHOT) - XX.May.2007
 * Fix detection of early AMD processors (K5, K6)
 * Fix detection of early Intel processors (Pentium III)
 * Fix caches detection for some VIA C3 & AMD Duron (errata)
-* Add more x86 feature flags (3dnow, sse4, popcnt, power, nx)
+* Add more x86 feature flags (3dnow, sse4, popcnt, abm, power, nx)
 * Add more ppc feature flags (gfxopt, mfcrf, popcntb, fprnd, mfpgpr)
 
 Version 1.0 (SNAPSHOT) - 15.Apr.2007

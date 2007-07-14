@@ -1160,6 +1160,12 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 	cpuid(0x80000000, &eax, NULL, NULL, NULL);
 	if ((eax & 0xffff0000) == 0x80000000 && eax >= 0x80000001) {
 	  cpuid(0x80000001, NULL, NULL, &ecx, &edx);
+	  if (ecx & (1 << 7))
+		feature_set_bit(MSSE);
+	  if (ecx & (1 << 6))
+		feature_set_bit(SSE4A);
+	  if (ecx & (1 << 5))
+		feature_set_bit(ABM);
 	  if (ecx & (1 << 2))
 		feature_set_bit(SVM);
 	  if (ecx & (1 << 0))
@@ -1196,6 +1202,9 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 		feature_get_bit(SSE4_1) ||
 		feature_get_bit(SSE4_2))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
+
+	if (feature_get_bit(POPCNT))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_POPCOUNT);
   }
 
   return cpuinfo_feature_get_bit(cip, feature);
