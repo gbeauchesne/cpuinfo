@@ -295,6 +295,7 @@ const char *cpuinfo_string_of_vendor(int vendor)
   case CPUINFO_VENDOR_SIS:		    str = "SiS";		break;
   case CPUINFO_VENDOR_TRANSMETA:	str = "Transmeta";	break;
   case CPUINFO_VENDOR_UMC:		    str = "UMC";		break;
+  case CPUINFO_VENDOR_PASEMI:		str = "P.A. Semi";	break;
   }
   return str;
 }

@@ -346,6 +346,13 @@ static const ppc_spec_t ppc_specs[] = {
 	1, 1,
 	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
   },
+  { /* PowerPC 750CL */
+	/* <http://www-01.ibm.com/chips/techlib/techlib.nsf/techdocs/2F33B5691BBB8769872571D10065F7D5/$file/750cldd2x_ds_v2.4_pub_29May2007.pdf> */
+	0xfffffff0, 0x00087210,
+	CPUINFO_VENDOR_IBM, "PowerPC 750CL",
+	1, 1,
+	{ &L1I_32KB, &L1D_32KB, &L2_256KB }
+  },
   { /* PowerPC 750FX */
 	0xffff0000, 0x70000000,
 	CPUINFO_VENDOR_IBM, "PowerPC 750FX",
@@ -452,6 +459,14 @@ static const ppc_spec_t ppc_specs[] = {
 	{ &L1I_64KB, &L1D_32KB, &L2_512KB }
   },
   {
+	/* PowerPC 970GX */
+	/* <http://www-01.ibm.com/chips/techlib/techlib.nsf/techdocs/38356BF4A2CE57F68725720400632685/$file/PwrArch_10.06.06c.pdf> (XXX: find datasheet) */
+	0xffff0000, 0x00450000,
+	CPUINFO_VENDOR_IBM, "PowerPC 970GX",
+	1, 1,
+	{ &L1I_64KB, &L1D_32KB, &L2_1MB }
+  },
+  {
 	/* PowerPC 970MP */
 	/* <http://www-306.ibm.com/chips/techlib/techlib.nsf/techdocs/B9C08F2F7CF5709587256F8C006727F1/$file/970MP_DS_DD1.1x_v1.1_pub_29Mar2007.pdf> */
 	0xffff0000, 0x00440000,
@@ -517,6 +532,14 @@ static const ppc_spec_t ppc_specs[] = {
 	1, 2,
 	{ &L1I_32KB, &L1D_32KB, &L2_512KB }
   },
+  {
+	/* PA6T */
+	/* <http://www.pasemi.com/downloads/PA_Semi_PA6T_1682M.pdf> */
+	0xffff0000, 0x00900000,
+	CPUINFO_VENDOR_PASEMI, "PWRficient PA6T-1682M",
+	2, 1,
+	{ &L1I_64KB, &L1D_64KB, &L2_2MB }
+  },
   { /* Unknown */
 	0x00000000, 0x00000000,
 	CPUINFO_VENDOR_UNKNOWN, NULL,
@@ -547,6 +570,7 @@ enum {
   PVR_POWERPC_7448		= 0x80040000,
   PVR_POWERPC_970		= 0x00390000,
   PVR_POWERPC_970FX		= 0x003c0000,
+  PVR_POWERPC_970GX		= 0x00450000,
   PVR_POWERPC_970MP		= 0x00440000,
   PVR_POWER3			= 0x00400000,
   PVR_POWER3PLUS		= 0x00410000,
@@ -556,6 +580,7 @@ enum {
   PVR_POWER5PLUS		= 0x003b0000,
   PVR_POWER6			= 0x003e0000,
   PVR_CELL				= 0x00700000,
+  PVR_PA6T				= 0x00900000,
 };
 
 #define PVR_MATCH(PVR, VALUE)	(((PVR) & 0xffff0000) == (VALUE))
@@ -565,7 +590,7 @@ enum {
 #define IS_POWERPC_604(PVR)		(PVR_POWERPC(PVR, 604) || PVR_POWERPC(PVR, 604E) || PVR_POWERPC(PVR, 604EV))
 #define IS_POWERPC_7400(PVR)	(PVR_POWERPC(PVR, 7400) || PVR_POWERPC(PVR, 7410))
 #define IS_POWERPC_745X(PVR)	(PVR_POWERPC(PVR, 7450) || PVR_POWERPC(PVR, 7455) || PVR_POWERPC(PVR, 7457) || PVR_POWERPC(PVR, 7447A) || PVR_POWERPC(PVR, 7448))
-#define IS_POWERPC_970(PVR)		(PVR_POWERPC(PVR, 970) || PVR_POWERPC(PVR, 970FX) || PVR_POWERPC(PVR, 970MP))
+#define IS_POWERPC_970(PVR)		(PVR_POWERPC(PVR, 970) || PVR_POWERPC(PVR, 970FX) || PVR_POWERPC(PVR, 970GX) || PVR_POWERPC(PVR, 970MP))
 
 // Returns PVR (Linux only)
 static uint32_t get_pvr(void)
