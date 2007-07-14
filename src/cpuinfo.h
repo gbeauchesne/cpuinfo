@@ -26,16 +26,16 @@ extern "C" {
 #endif
 
 // cpuinfo_t is a private data structure
-struct cpuinfo;
+typedef struct cpuinfo cpuinfo_t;
 
 // Returns a new cpuinfo descriptor
-extern struct cpuinfo *cpuinfo_new(void);
+extern cpuinfo_t *cpuinfo_new(void);
 
 // Release the cpuinfo descriptor and all allocated data
-extern void cpuinfo_destroy(struct cpuinfo *cip);
+extern void cpuinfo_destroy(cpuinfo_t *cip);
 
 // Dump all useful information for debugging
-extern int cpuinfo_dump(struct cpuinfo *cip, FILE *out);
+extern int cpuinfo_dump(cpuinfo_t *cip, FILE *out);
 
 /* ========================================================================= */
 /* == General Processor Information                                       == */
@@ -44,7 +44,7 @@ extern int cpuinfo_dump(struct cpuinfo *cip, FILE *out);
 #define CPUINFO_CLASS(N) (((unsigned int)(N)) << 8)
 
 // Processor vendor
-enum {
+typedef enum {
   CPUINFO_VENDOR_UNKNOWN,
   CPUINFO_VENDOR_AMD,
   CPUINFO_VENDOR_CENTAUR,
@@ -61,16 +61,16 @@ enum {
   CPUINFO_VENDOR_TRANSMETA,
   CPUINFO_VENDOR_UMC,
   CPUINFO_VENDOR_PASEMI
-};
+} cpuinfo_vendor_t;
 
 // Get processor vendor ID 
-extern int cpuinfo_get_vendor(struct cpuinfo *cip);
+extern int cpuinfo_get_vendor(cpuinfo_t *cip);
 
 // Get processor name
-extern const char *cpuinfo_get_model(struct cpuinfo *cip);
+extern const char *cpuinfo_get_model(cpuinfo_t *cip);
 
 // Processor socket
-enum {
+typedef enum {
   CPUINFO_SOCKET_UNKNOWN,
 
   CPUINFO_SOCKET_478 = CPUINFO_CLASS('I'),
@@ -85,31 +85,31 @@ enum {
   CPUINFO_SOCKET_AM2,
   CPUINFO_SOCKET_F,
   CPUINFO_SOCKET_S1
-};
+} cpuinfo_socket_t;
 
 // Get processor frequency in MHz
-extern int cpuinfo_get_frequency(struct cpuinfo *cip);
+extern int cpuinfo_get_frequency(cpuinfo_t *cip);
 
 // Get processor socket ID
-extern int cpuinfo_get_socket(struct cpuinfo *cip);
+extern int cpuinfo_get_socket(cpuinfo_t *cip);
 
 // Get number of cores per CPU package
-extern int cpuinfo_get_cores(struct cpuinfo *cip);
+extern int cpuinfo_get_cores(cpuinfo_t *cip);
 
 // Get number of threads per CPU core
-extern int cpuinfo_get_threads(struct cpuinfo *cip);
+extern int cpuinfo_get_threads(cpuinfo_t *cip);
 
 /* ========================================================================= */
 /* == Processor Caches Information                                        == */
 /* ========================================================================= */
 
-enum {
+typedef enum {
   CPUINFO_CACHE_TYPE_UNKNOWN,
   CPUINFO_CACHE_TYPE_DATA,
   CPUINFO_CACHE_TYPE_CODE,
   CPUINFO_CACHE_TYPE_UNIFIED,
   CPUINFO_CACHE_TYPE_TRACE
-};
+} cpuinfo_cache_type_t;
 
 typedef struct {
   int type;		// cache type (above)
@@ -123,13 +123,13 @@ typedef struct {
 } cpuinfo_cache_t;
 
 // Get cache information (returns read-only descriptors)
-extern const cpuinfo_cache_t *cpuinfo_get_caches(struct cpuinfo *cip);
+extern const cpuinfo_cache_t *cpuinfo_get_caches(cpuinfo_t *cip);
 
 /* ========================================================================= */
 /* == Processor Features Information                                      == */
 /* ========================================================================= */
 
-enum {
+typedef enum {
   CPUINFO_FEATURE_ARCH	= 0xff00,
   CPUINFO_FEATURE_MASK	= 0x00ff,
 
@@ -187,10 +187,10 @@ enum {
 
   CPUINFO_FEATURE_MIPS	= CPUINFO_CLASS('M'),
   CPUINFO_FEATURE_MIPS_MAX
-};
+} cpuinfo_feature_t;
 
 // Returns 1 if CPU supports the specified feature
-extern int cpuinfo_has_feature(struct cpuinfo *cip, int feature);
+extern int cpuinfo_has_feature(cpuinfo_t *cip, int feature);
 
 // Utility functions to convert IDs
 extern const char *cpuinfo_string_of_vendor(int vendor);
