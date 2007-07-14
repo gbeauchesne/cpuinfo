@@ -909,6 +909,31 @@ static void check_hwcap_fsqrt(void)
   __asm__ __volatile__ (".long 0xfc00002c"); // fsqrt f0,f0
 }
 
+static void check_hwcap_fsel(void)
+{
+  __asm__ __volatile__ (".long 0xfc00002e"); // fsel f0,f0,f0,f0
+}
+
+static void check_hwcap_mfcrf(void)
+{
+  __asm__ __volatile__ (".long 0x7c101026"); // mfcr r0,1
+}
+
+static void check_hwcap_popcntb(void)
+{
+  __asm__ __volatile__ (".long 0x7c0000f4"); // popcntb r0,r0
+}
+
+static void check_hwcap_friz(void)
+{
+  __asm__ __volatile__ (".long 0xfc000350"); // friz f0,f0
+}
+
+static void check_hwcap_mfpgpr(void)
+{
+  __asm__ __volatile__ (".long 0x7c0004be"); // mffgpr f0,r0
+}
+
 // Returns 1 if CPU supports the specified feature
 int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 {
@@ -923,6 +948,24 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 
 	if (cpuinfo_feature_test_function(check_hwcap_fsqrt))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_FSQRT);
+
+	if (cpuinfo_feature_test_function(check_hwcap_fsel))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_FSEL);
+
+	if (cpuinfo_feature_test_function(check_hwcap_mfcrf))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_MFCRF);
+
+	if (cpuinfo_feature_test_function(check_hwcap_popcntb))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_POPCNTB);
+
+	if (cpuinfo_feature_test_function(check_hwcap_friz))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_FPRND);
+
+	if (cpuinfo_feature_test_function(check_hwcap_mfpgpr))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_PPC_MFPGPR);
+
+	if (cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_PPC_POPCNTB))
+	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_POPCOUNT);
 
 	if (cpuinfo_feature_get_bit(cip, CPUINFO_FEATURE_PPC_VMX))
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);

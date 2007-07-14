@@ -348,8 +348,9 @@ typedef struct {
 #endif
 
 static const cpuinfo_feature_string_t common_feature_strings[] = {
-  DEFINE_(64BIT,		"64bit",	"64-bit capable"									),
-  DEFINE_(SIMD,			"simd",		"SIMD capable"										),
+  DEFINE_(64BIT,		"64bit",	"64-bit instructions"								),
+  DEFINE_(SIMD,			"simd",		"SIMD instructions"									),
+  DEFINE_(POPCOUNT,		"popcount",	"Population count instruction"						),
 };
 
 static const int n_common_feature_strings = sizeof(common_feature_strings) / sizeof(common_feature_strings[0]);
@@ -391,9 +392,14 @@ static const cpuinfo_feature_string_t ia64_feature_strings[] = {
 static const int n_ia64_feature_strings = sizeof(ia64_feature_strings) / sizeof(ia64_feature_strings[0]);
 
 static const cpuinfo_feature_string_t ppc_feature_strings[] = {
-  DEFINE_(PPC,			"[ppc]",	"-- ppc-specific features --"						),
-  DEFINE_(PPC_VMX,		"vmx",		"Vector instruction set (AltiVec, VMX)"				),
-  DEFINE_(PPC_FSQRT,	"fsqrt",	"Floating-point Square Root support in hardware"	),
+  DEFINE_(PPC,			"[ppc]",	"-- ppc-specific features --"										),
+  DEFINE_(PPC_VMX,		"vmx",		"Vector instruction set (AltiVec, VMX)"								),
+  DEFINE_(PPC_GPOPT,	"gpopt",	"General Purpose group optional instructions (fsqrt)"				),
+  DEFINE_(PPC_GFXOPT,	"gfxopt",	"Graphics group optional instructions (fsel, fres)"					),
+  DEFINE_(PPC_MFCRF,	"mfcrf",	"PowerPC V2.01 single field mfcr instruction"						),
+  DEFINE_(PPC_POPCNTB,	"popcntb",	"PowerPC V2.02 popcntb instruction"									),
+  DEFINE_(PPC_FPRND,	"fprnd",	"PowerPC V2.02 floating point rounding instructions (friz, frin)"	),
+  DEFINE_(PPC_MFPGPR,	"mfpgpr",	"PowerPC V2.05 move floating point to/from GPR instructions"		),
 };
 
 static const int n_ppc_feature_strings = sizeof(ppc_feature_strings) / sizeof(ppc_feature_strings[0]);
