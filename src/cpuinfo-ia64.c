@@ -314,7 +314,9 @@ int cpuinfo_arch_has_feature(struct cpuinfo *cip, int feature)
 	  cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_IA64_AO);
 
 	// no need to check for those, they are bound to exist on this CPU
-	cpuinfo_feature_set_bit(CPUINFO_FEATURE_64BIT);
+	cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_64BIT);
+	cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_SIMD);
+	cpuinfo_feature_set_bit(cip, CPUINFO_FEATURE_POPCOUNT);
   }
 
   return cpuinfo_feature_get_bit(cip, feature);
