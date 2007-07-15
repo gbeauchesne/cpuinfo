@@ -72,7 +72,7 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
   // Determine caches hierarchy
 #if defined __linux__
   char line[256];
-  char dummy[256];
+  char dummy[sizeof(line)];
   cpuinfo_cache_descriptor_t cache_desc;
   FILE *cache_info = fopen("/proc/pal/cpu0/cache_info", "r"); // XXX: iterate until an online processor
   if (cache_info) {
@@ -83,7 +83,7 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
 	  int len = strlen(line);
 	  if (len == 0)
 		continue;
-	  line[len-1] = 0;
+	  line[len - 1] = 0;
 
 	  // Parse line
 	  int i;
@@ -108,6 +108,41 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
 	  cpuinfo_list_insert(&acip->caches, &cache_desc);
 	fclose(cache_info);
   }
+#elif defined __hpux
+  char line[256];
+  cpuinfo_cache_descriptor_t cache_desc;
+  FILE *cache_info = popen("/usr/contrib/bin/machinfo", "r"); // XXX: detect machinfo path?
+  if (cache_info) {
+	char cache_type[32];
+	cache_desc.level = -1;
+	while(fgets(line, sizeof(line), cache_info)) {
+	  // Read line
+	  int len = strlen(line);
+	  if (len == 0)
+		continue;
+	  line[len - 1] = 0;
+
+	  // Parse line
+	  int level, size, assoc;
+	  if (sscanf(line, " L%d %[^:]: size = %d KB, associativity = %d", &level, cache_type, &size, &assoc) == 4) {
+		if (cache_desc.level > 0)
+		  cpuinfo_list_insert(&acip->caches, &cache_desc);
+		cache_desc.level = level;
+		cache_desc.size = size;
+		if (strcmp(cache_type, "Instruction") == 0)
+		  cache_desc.type = CPUINFO_CACHE_TYPE_CODE;
+		else if (strcmp(cache_type, "Data") == 0)
+		  cache_desc.type = CPUINFO_CACHE_TYPE_DATA;
+		else if (strcmp(cache_type, "Unified") == 0)
+		  cache_desc.type = CPUINFO_CACHE_TYPE_UNIFIED;
+		else
+		  fprintf(stderr, "ERROR: unknown cache type '%s'\n", cache_type);
+	  }
+	}
+	if (cache_desc.level > 0)
+	  cpuinfo_list_insert(&acip->caches, &cache_desc);
+	pclose(cache_info);
+  }
 #endif
 
   // Determine CPU clock frequency
@@ -119,7 +154,7 @@ static int cpuinfo_arch_init(ia64_cpuinfo_t *acip)
 	  int len = strlen(line);
 	  if (len == 0)
 		continue;
-	  line[len-1] = 0;
+	  line[len - 1] = 0;
 
 	  // Parse line
 	  float f;
