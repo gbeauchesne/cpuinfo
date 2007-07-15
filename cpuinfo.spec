@@ -20,7 +20,7 @@ Name:		%{name}
 Version:	%{version}
 Release:	%{release}
 Source0:	%{name}-%{version}%{?svndate:-%{svndate}}.tar.bz2
-License:	GPL
+License:	GPL/LGPL
 Group:		System/Kernel and hardware
 Url:		http://gwenole.beauchesne/projects/cpuinfo
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -102,11 +102,18 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Wed May  9 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.2
-- fdd Perl bindings
+* Sun Jul 15 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.2
+- relicense the library under LGPL
+- add Perl bindings
+- add new ppc CPUs (PA6T-1682M, PowerPC 750CL and 970GX)
 - fix detection of VIA processors (C3, C7)
 - fix detection of early AMD processors (K5, K6)
-- add more x86 feature flags (3dnow, sse4, popcnt)
+- fix detection of early Intel processors (Pentium III)
+- fix caches detection for HP-UX/ia64 (use `machinfo')
+- fix caches detection for some VIA C3 & AMD Duron (errata)
+- add more ia64 standard feature flags (simd, popcount)
+- add more x86 feature flags (3dnow, sse4, popcnt, abm, power, nx)
+- add more ppc feature flags (gfxopt, mfcrf, popcntb, fprnd, mfpgpr)
 
 * Sun Apr 15 2007 Gwenole Beauchesne <gb.public@free.fr> 1.0-0.1
 - initial packaging
