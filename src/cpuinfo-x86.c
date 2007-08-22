@@ -284,7 +284,7 @@ static char *get_model_amd_k8(struct cpuinfo *cip)
   cpuid(1, &eax, &ebx, NULL, NULL);
   uint32_t eightbit_brand_id = ebx & 0xff;
 
-  if ((eax & 0xffffff00) == 0x00040f00)
+  if ((eax & 0xfffcff00) == 0x00040f00)
 	return get_model_amd_npt(cip);
 
   uint32_t ecx, edx;
@@ -749,8 +749,8 @@ static int cpuinfo_get_socket_amd(void)
 	  D(bug("K8 cpuid(1) => %08x\n", eax));
 	  break;
 	}
-	switch ((eax >> 16) & 0xf) {
-	case 0x4:								// AMD NPT Family 0Fh (Orleans/Manila)
+	if ((eax & 0xfffcff00) == 0x00040f00) {
+	  // AMD NPT Family 0Fh (Orleans/Manila)
 	  cpuid(0x80000001, &eax, NULL, NULL, NULL);
 	  switch ((eax >> 4) & 3) {
 	  case 0:
@@ -763,7 +763,6 @@ static int cpuinfo_get_socket_amd(void)
 		socket = CPUINFO_SOCKET_AM2;
 		break;
 	  }
-	  break;
 	}
   }
 
