@@ -62,7 +62,7 @@ mips64)
     ;;
 esac
 case "$target_os" in
-cygwin*)
+cygwin*|mingw*)
     target_os="windows"
     ;;
 irix*)
@@ -216,6 +216,29 @@ if $cc -Werror -S $TMPC -o $TMPS >/dev/null 2>&1; then
     fi
 fi
 rm -f $TMPC $TMPS
+
+# check for sigaction() support
+cat > $TMPC << EOF
+#include <signal.h>
+static void sigill_handler(int sig) { }
+
+int main(void) {
+  struct sigaction old_sigill_sa, sigill_sa;
+  sigemptyset(&sigill_sa.sa_mask);
+  sigill_sa.sa_flags = 0;
+  sigill_sa.sa_handler = sigill_handler;
+  if (sigaction(SIGILL, &sigill_sa, &old_sigill_sa) != 0)
+    return 1;
+  return 0;
+}
+EOF
+has_sigaction=no
+if $cc $TMPC -o $TMPE >/dev/null 2>&1; then
+    if $TMPE; then
+	has_sigaction=yes
+    fi
+fi
+rm -f $TMPC $TMPE
 
 # check for compiler type
 cat > $TMPC << EOF
@@ -461,6 +484,11 @@ if test "$has_visibility_attribute" = "yes"; then
     echo "#define HAVE_VISIBILITY_ATTRIBUTE 1" >> $config_h
 else
     echo "#undef HAVE_VISIBILITY_ATTRIBUTE" >> $config_h
+fi
+if test "$has_sigaction" = "yes"; then
+    echo "#define HAVE_SIGACTION 1" >> $config_h
+else
+    echo "#undef HAVE_SIGACTION" >> $config_h
 fi
 
 # check for headers defining fixed-size integers
