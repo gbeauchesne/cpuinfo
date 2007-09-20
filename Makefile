@@ -45,11 +45,16 @@ PERL = perl
 endif
 
 CPPFLAGS	= -I. -I$(SRC_PATH)
-PICFLAGS	= -fPIC
+PIC_CFLAGS	= -fPIC
+DSO_LDFLAGS	= -shared
 CC_FOR_SHARED	= $(CC)
 ifeq ($(OS),darwin)
-PICFLAGS	= -fno-common
+PIC_CFLAGS	= -fno-common
 CC_FOR_SHARED	= DYLD_LIBRARY_PATH=. $(CC)
+endif
+ifeq ($(COMPILER),xlc)
+PIC_CFLAGS	= -qpic
+DSO_LDFLAGS	= -qmkshrobj
 endif
 
 libcpuinfo_a_needs_PIC	= no
@@ -68,7 +73,7 @@ libcpuinfo_so_minor	= 0
 libcpuinfo_so		= libcpuinfo.so
 libcpuinfo_so_SONAME	= $(libcpuinfo_so).$(libcpuinfo_so_major)
 libcpuinfo_so_LTLIBRARY	= $(libcpuinfo_so).$(libcpuinfo_so_major).$(libcpuinfo_so_minor).0
-libcpuinfo_so_LDFLAGS	= -shared -Wl,-soname,$(libcpuinfo_so_SONAME)
+libcpuinfo_so_LDFLAGS	= $(DSO_LDFLAGS) -Wl,-soname,$(libcpuinfo_so_SONAME)
 ifeq ($(OS),darwin)
 libcpuinfo_so		= libcpuinfo.dylib
 libcpuinfo_so_SONAME	= libcpuinfo.$(libcpuinfo_so_major).dylib
@@ -217,7 +222,7 @@ changelog.commit:
 	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS)
 
 %.os: $(SRC_PATH)/src/%.c
-	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS) $(PICFLAGS)
+	$(CC) -c $< -o $@ $(CPPFLAGS) $(CFLAGS) $(PIC_CFLAGS)
 
 $(libcpuinfo_a): $(libcpuinfo_a_OBJECTS)
 	$(AR) rc $@ $(libcpuinfo_a_OBJECTS)
