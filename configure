@@ -297,6 +297,10 @@ if ! is_cxx_compiler; then
 	if check_cc_option -std=gnu99; then
 	    cc="$cc -std=gnu99"
 	fi
+    elif test "$compiler" = "icc"; then
+	if check_cc_option -c99; then
+	    cc="$cc -c99"
+	fi
     elif test "$compiler" = "mipspro"; then
 	if check_cc_option -c99; then
 	    cc="$cc -c99"
@@ -331,12 +335,6 @@ if test -z "$CFLAGS"; then
     CFLAGS="-O2 -g"
     if check_cc_option -mtune=generic $CFLAGS; then
 	CFLAGS="$CFLAGS -mtune=generic"
-    fi
-fi
-if test "$biarch" = "yes" -a -z "$CFLAGS_32"; then
-    CFLAGS_32="-m32 -O2 -g"
-    if check_cc_option -mtune=generic $CFLAGS_32; then
-	CFLAGS_32="$CFLAGS_32 -mtune=generic"
     fi
 fi
 if check_cc_option -Wall; then
