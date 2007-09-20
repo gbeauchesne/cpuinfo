@@ -379,6 +379,7 @@ static const cpuinfo_feature_string_t x86_feature_strings[] = {
   DEFINE_(X86_SSE4_1,	"sse4.1",	"SSE4.1 Technology (Penryn New Instructions)"		),
   DEFINE_(X86_SSE4_2,	"sse4.2",	"SSE4.2 Technology (Nehalem New Instructions)"		),
   DEFINE_(X86_SSE4A,	"sse4a",	"SSE4A Technology (AMD Barcelona Instructions)"		),
+  DEFINE_(X86_SSE5,		"sse5",		"SSE5 Technology (AMD Bulldozer Instructions)"		),
   DEFINE_(X86_MSSE,		"msse",		"Misaligned SSE mode"								),
   DEFINE_(X86_VMX,		"vmx",		"Intel Virtualisation Technology (VT)"				),
   DEFINE_(X86_SVM,		"svm",		"AMD-v Technology (Pacifica)"						),
